@@ -49,7 +49,7 @@ type User struct {
 	DisplayName   string                `mapstructure:"display_name" json:"display_name" validate:"uuid_rfc4122"`     // Display name for the user
 	CredentialIDs []webauthn.Credential `mapstructure:"credential_ids" json:"credential_ids" validate:"uuid_rfc4122"` // List of credential IDs associated with the user
 	Descriptor    []float32             `mapstructure:"descriptor" json:"descriptor" validate:"uuid_rfc4122"`         // Face descriptor for the user
-	Balance       int                   `mapstructure:"balance" json:"balance" validate:"uuid_rfc4122"`               // Balance of the user in cents
+	Balance       int                   `mapstructure:"balance" json:"balance,string" validate:"uuid_rfc4122"`        // Balance of the user in cents
 }
 
 // Define your own struct that matches the CredentialCreation structure
@@ -187,7 +187,7 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 
 		if string(desc) == descriptorJSON {
 			ctx.SetState("user", &user)
-			log.Println("state was set, beginning login...")
+			log.Println("state was set, beginning login...", user.Balance)
 			a.beginLogin(ctx, string(user.CredentialIDs[0].ID))
 		} else {
 			log.Println("login user not found")

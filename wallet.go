@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"strconv"
 
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
 )
@@ -14,6 +14,7 @@ type wallet struct {
 	loggedIn bool
 	user     *User
 	userId   string
+	balance  string
 }
 
 func (w *wallet) OnMount(ctx app.Context) {
@@ -24,8 +25,8 @@ func (w *wallet) OnMount(ctx app.Context) {
 
 	ctx.GetState("user", &w.user)
 
-	log.Println(string(w.user.ID))
 	w.userId = string(w.user.ID)
+	w.balance = strconv.Itoa(w.user.Balance)
 }
 
 // The Render method is where the component appearance is defined. Here, a
@@ -40,7 +41,7 @@ func (w *wallet) Render() app.UI {
 						app.Span().Text("Balance"),
 					),
 					app.Div().Class("summary-balance").Body(
-						app.Span().Text("GUBI 293.00"),
+						app.Span().Text(w.balance+" GUBI"),
 					),
 				),
 			),
