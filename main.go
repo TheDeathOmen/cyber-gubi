@@ -1,0 +1,87 @@
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/maxence-charriere/go-app/v10/pkg/app"
+)
+
+type Descriptor struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+type RequestBody struct {
+	Descriptor []Descriptor `json:"descriptor"`
+}
+
+// The main function is the entry point where the app is configured and started.
+// It is executed in 2 different environments: A client (the web browser) and a
+// server.
+func main() {
+	// The first thing to do is to associate the wallet component with a path.
+	//
+	// This is done by calling the Route() function,  which tells go-app what
+	// component to display for a given path, on both client and server-side.
+	app.Route("/", func() app.Composer { return &home{} })
+	app.Route("/auth", func() app.Composer { return &auth{} })
+	app.Route("/wallet", func() app.Composer { return &wallet{} })
+
+	// Once the routes set up, the next thing to do is to either launch the app
+	// or the server that serves the app.
+	//
+	// When executed on the client-side, the RunWhenOnBrowser() function
+	// launches the app,  starting a loop that listens for app events and
+	// executes client instructions. Since it is a blocking call, the code below
+	// it will never be executed.
+	//
+	// When executed on the server-side, RunWhenOnBrowser() does nothing, which
+	// lets room for server implementation without the need for precompiling
+	// instructions.
+	app.RunWhenOnBrowser()
+
+	// Finally, launching the server that serves the app is done by using the Go
+	// standard HTTP package.
+	//
+	// The Handler is an HTTP handler that serves the client and all its
+	// required resources to make it work into a web browser. Here it is
+	// configured to handle requests with a path that starts with "/".
+	http.Handle("/", &app.Handler{
+		Name:        "Cyber GUBI",
+		Description: "An unconditional universal basic income",
+		Styles: []string{
+			"/web/app.css", // Loads app.css file.
+		},
+		Scripts: []string{
+			"web/script.js",
+			"web/face-api.js",
+		},
+	})
+
+	http.Handle("/auth", &app.Handler{
+		Name:        "Cyber GUBI",
+		Description: "An unconditional universal basic income",
+		Styles: []string{
+			"/web/app.css", // Loads app.css file.
+		},
+		Scripts: []string{
+			"web/script.js",
+			"web/face-api.js",
+		},
+	})
+
+	http.Handle("/wallet", &app.Handler{
+		Name:        "Cyber GUBI",
+		Description: "An unconditional universal basic income",
+		Styles: []string{
+			"/web/app.css", // Loads app.css file.
+		},
+	})
+
+	if err := http.ListenAndServe(":8000", nil); err != nil {
+		log.Fatal(err)
+	}
+}
