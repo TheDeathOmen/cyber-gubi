@@ -15,7 +15,7 @@ import (
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
 )
 
-const dbNameUser = "user"
+const dbUser = "user"
 
 // auth is a component that uses webauthn and biometrics. A component is a
 // customizable, independent, and reusable UI element. It is created by
@@ -49,7 +49,6 @@ type User struct {
 	DisplayName   string                `mapstructure:"display_name" json:"display_name" validate:"uuid_rfc4122"`     // Display name for the user
 	CredentialIDs []webauthn.Credential `mapstructure:"credential_ids" json:"credential_ids" validate:"uuid_rfc4122"` // List of credential IDs associated with the user
 	Descriptor    []float32             `mapstructure:"descriptor" json:"descriptor" validate:"uuid_rfc4122"`         // Face descriptor for the user
-	Balance       int                   `mapstructure:"balance" json:"balance,string" validate:"uuid_rfc4122"`        // Balance of the user in cents
 }
 
 // Define your own struct that matches the CredentialCreation structure
@@ -186,8 +185,7 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 		}
 
 		if string(desc) == descriptorJSON {
-			ctx.SetState("user", &user)
-			log.Println("state was set, beginning login...", user.Balance)
+			ctx.SetState("userID", string(user.ID))
 			a.beginLogin(ctx, string(user.CredentialIDs[0].ID))
 		} else {
 			log.Println("login user not found")
@@ -225,7 +223,7 @@ func (a *auth) doFetch(ctx app.Context, e app.Event) {
 }
 
 func (a *auth) getUser(key, value string) User {
-	u, err := a.sh.OrbitDocsQueryEnc(dbNameUser, key, value)
+	u, err := a.sh.OrbitDocsQueryEnc(dbUser, key, value)
 	if err != nil {
 		log.Println("Error querying for user:", err)
 		return User{}
@@ -243,7 +241,7 @@ func (a *auth) getUser(key, value string) User {
 }
 
 func (a *auth) getUsers() []*User {
-	res, err := a.sh.OrbitDocsQueryEnc(dbNameUser, "all", "")
+	res, err := a.sh.OrbitDocsQueryEnc(dbUser, "all", "")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -279,7 +277,7 @@ func (a *auth) getUsers() []*User {
 }
 
 func (a *auth) deleteUsers() {
-	err := a.sh.OrbitDocsDelete(dbNameUser, "all")
+	err := a.sh.OrbitDocsDelete(dbUser, "all")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -307,7 +305,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID, descriptorJSON 
 			log.Fatal(err)
 		}
 
-		err = a.sh.OrbitDocsPutEnc(dbNameUser, userJSON)
+		err = a.sh.OrbitDocsPutEnc(dbUser, userJSON)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -401,18 +399,7 @@ func (a *auth) beginRegistration(ctx app.Context, descriptorJSON string) {
 				log.Fatal(err)
 			}
 
-			user := &User{
-				ID: []byte(userID),
-				CredentialIDs: []webauthn.Credential{
-					{
-						ID: []byte(credentialID),
-					},
-				},
-				Descriptor: descriptorBytes,
-				Balance:    0,
-			}
-
-			ctx.SetState("user", &user)
+			ctx.SetState("userID", userID)
 			a.beginLogin(ctx, credentialID)
 		} else {
 			app.Window().Get("alert").Invoke("No credential returned.")
@@ -483,8 +470,8 @@ func (a *auth) beginLogin(ctx app.Context, credentialID string) {
 		if len(args) > 0 {
 			app.Window().Get("alert").Invoke("login successful!")
 			ctx.SetState("loggedIn", true)
-			ctx.Navigate("/wallet")
 			// redirect to wallet
+			ctx.Navigate("/wallet")
 		} else {
 			app.Window().Get("alert").Invoke("beginLogin error: ", "No credential returned")
 			log.Fatal("No credential returned")
