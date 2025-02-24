@@ -43,10 +43,10 @@ func (w *wallet) OnMount(ctx app.Context) {
 	sh := shell.NewShell("localhost:5001")
 	w.sh = sh
 
-	ctx.GetState("loggedIn", &w.loggedIn)
-	if !w.loggedIn {
-		ctx.Navigate("/auth")
-	}
+	// ctx.GetState("loggedIn", &w.loggedIn)
+	// if !w.loggedIn {
+	// 	ctx.Navigate("/auth")
+	// }
 
 	ctx.GetState("userID", &w.userID)
 
@@ -89,6 +89,7 @@ func (w *wallet) getBalance(ctx app.Context) {
 
 		ctx.Dispatch(func(ctx app.Context) {
 			w.userBalance = userBalances[0]
+			ctx.SetState("balance", w.userBalance)
 			// check if recurring income was received for this month
 			if w.userBalance.LastReceived.Year() != time.Now().Year() && w.userBalance.LastReceived.Month() != time.Now().Month() {
 				w.getIncome(ctx)
@@ -166,12 +167,17 @@ func (w *wallet) getIncome(ctx app.Context) {
 			// check if there is a matching income year and month to current moment
 			if w.income.Period.Year() == time.Now().Year() && w.income.Period.Month() == time.Now().Month() {
 				w.userBalance.Balance = (w.userBalance.Balance + w.income.Amount)
+				w.userBalance.Income = w.income.Amount
 				w.userBalance.LastReceived = time.Now()
+				ctx.SetState("balance", w.userBalance)
 				w.updateBalance(ctx)
-
 			}
 		})
 	})
+}
+
+func (w *wallet) doPay(ctx app.Context, e app.Event) {
+	ctx.Navigate("payment")
 }
 
 // The Render method is where the component appearance is defined. Here, a
@@ -247,10 +253,8 @@ func (w *wallet) Render() app.UI {
 						),
 					),
 				),
-			),
-			app.Div().Class("drawer").Body(
 				app.Div().Class("menu-btn").Body(
-					app.Span().Text("Pay"),
+					app.Button().Class("submit").Type("submit").Text("Pay").OnClick(w.doPay),
 				),
 			),
 		),

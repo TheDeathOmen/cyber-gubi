@@ -120,21 +120,29 @@ font-family: 'Montserrat', sans-serif;
   z-index: 4;
   position: absolute;
   top: 210px;
-  margin-left:30px;
+  margin: 0 7.5%;
   display:flex;
   flex-direction:column;
-  width:85%;
+  width: 85%;
 }
 
 .card {
-  
-font-family: 'Montserrat', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   align-self: stretch;
   background-color: white;
-  border-radius: 12px;
+  border: 1px solid lightseagreen;
+  border-radius: 50px;
   display: flex;
   flex-direction:column;
    box-shadow: 0 14px 28px rgba(0,0,0,0.02), 0 10px 10px rgba(0,0,0,0.0);
+}
+
+video {
+  border-radius: 20px;
+}
+
+canvas {
+  border-radius: 20px;
 }
 
 iframe {
@@ -152,7 +160,7 @@ iframe {
 }
 
 .card-item {
-  margin: 20px;
+  margin-top: 20px;
   display: flex;
   flex-direction: column;
   text-align: center;
@@ -240,7 +248,8 @@ iframe {
   align-items: center;
   background-color:white;
   box-shadow: 0 14px 28px rgba(0,0,0,0.02), 0 10px 10px rgba(0,0,0,0.0);
-  border-radius: 12px;
+  border: 1px solid lightseagreen;
+  border-radius: 20px;
   margin-bottom:20px;
 }
 
@@ -289,7 +298,7 @@ iframe {
   display:flex;
   /* background-color: white; */
   height:120px;
-  position:absolute;
+  /* position:absolute; */
   bottom: 0px;
   width: 100%;
   border-top-left-radius: 50px;
@@ -299,9 +308,13 @@ iframe {
   align-items: center;
 }
 
-.drawer-auth {
+/* .drawer-auth {
   height: 300px;
 }
+
+.drawer-pay {
+  height: 200px;
+} */
 
 
 .drawer span {
@@ -337,9 +350,10 @@ iframe {
   background-color: lightseagreen;
   color: white;
   /* top: -25px; */
-  position: absolute;
+  /* position: absolute; */
+  margin: 0 auto;
   /* transform: rotate(-45deg); */
-  border-radius: 10px;
+  border-radius: 20px;
   box-shadow: 5px 5px 25px 0px rgba(0,0,0,0.2);
   cursor: pointer;
   transition: all 0.1s;
@@ -370,7 +384,7 @@ iframe {
 }
 
 .auth-bar {
-  position: absolute;
+  /* position: absolute; */
   background-color: lightseagreen;
   color: white;
   padding: 10px;
@@ -379,7 +393,7 @@ iframe {
   left: 0;
   right: 0;
   z-index: 1000;
-  border-radius: 10px;
+  border-radius: 20px;
   width: 200px;
   margin: 0 auto;
 }
@@ -403,4 +417,56 @@ iframe {
 #canvas {
   position: absolute;
   left: 19%;
+}
+
+#pay-form {
+  padding: 25px;
+
+  label {
+    padding-right: 10px;
+  }
+
+  select {
+    padding: 10px;
+    border: 1px solid lightseagreen;
+    border-radius: 20px;
+  }
+
+  input {
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid lightseagreen;
+    border-radius: 20px;
+  }
+}
+
+.tabs {
+  margin-top: 25px;
+}
+
+button {
+  border-radius: 20px;
+}
+
+.tab-button {
+  width: 95px;
+  margin: 0 5px;
+  padding: 10px;
+  border: 1px solid lightseagreen;
+}
+
+.tab-content {
+  margin-top: 15px;
+}
+
+.tab-active {
+  background: darkblue; 
+  color: white;
+}
+
+.submit {
+  border: none;
+  background: none;
+  color: white;
+  font-size: 1.5rem;
 }

@@ -529,13 +529,13 @@ func (a *auth) Render() app.UI {
 						),
 					),
 				),
-			),
-			app.Div().Class("drawer drawer-auth").Body(
-				app.Div().ID("auth-bar").Class("auth-bar").Body(
-					app.Span().Class("auth-message blinking").Text("Authenticating..."),
+				app.Div().Class("drawer drawer-auth").Body(
+					app.Div().ID("auth-bar").Class("auth-bar").Body(
+						app.Span().Class("auth-message blinking").Text("Authenticating..."),
+					),
+					app.Input().ID("register-btn").OnClick(a.doRegister).Hidden(true),
+					app.Input().ID("login-btn").OnClick(a.doLogin).Hidden(true),
 				),
-				app.Input().ID("register-btn").OnClick(a.doRegister).Hidden(true),
-				app.Input().ID("login-btn").OnClick(a.doLogin).Hidden(true),
 			),
 		),
 	)
