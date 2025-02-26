@@ -187,8 +187,6 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 		if string(desc) == descriptorJSON {
 			ctx.SetState("userID", string(user.ID))
 			a.beginLogin(ctx, string(user.CredentialIDs[0].ID))
-		} else {
-			log.Println("login user not found")
 		}
 	}
 
@@ -513,8 +511,8 @@ func (a *auth) Render() app.UI {
 					),
 				),
 			),
-			app.Div().Class("content").Body(
-				app.Div().Class("card").Body(
+			app.Div().ID("content").Body(
+				app.Div().Class("card card-auth").Body(
 					app.Div().Class("upper-row").Body(
 						app.Div().Class("card-item").Body(
 							app.Span().Class("span-header").Text("Face ID"),
@@ -531,7 +529,8 @@ func (a *auth) Render() app.UI {
 				),
 				app.Div().Class("drawer drawer-auth").Body(
 					app.Div().ID("auth-bar").Class("auth-bar").Body(
-						app.Span().Class("auth-message blinking").Text("Authenticating..."),
+						app.Span().Class("auth-message").Text("Authenticating"),
+						app.Span().Class("blinking").Text("..."),
 					),
 					app.Input().ID("register-btn").OnClick(a.doRegister).Hidden(true),
 					app.Input().ID("login-btn").OnClick(a.doLogin).Hidden(true),

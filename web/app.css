@@ -19,7 +19,7 @@ body {
 .mobile {
   background-color: #F7F7F7;
   border-radius: 50px;
-  /* margin: 10px; */
+  margin: 10px;
   height: 812px;
   width: 375px;
   box-shadow: 0 1px 5px -1px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(0, 0, 0, 0.15);
@@ -96,27 +96,7 @@ font-family: 'Montserrat', sans-serif;
   
 }
 
-.summary-text-2 {
-  font-size: 0.8rem;
-  letter-spacing: 1px;
-}
-
-.user-profile {
-  margin-top: 4rem;
-  height: 70px;
-  width: 70px;
-  align-self: flex-start;
-}
-
-.user-photo {
-  height: 100%;
-  width: 100%;
-  border-radius: 50%;
-  border: 1px solid white;
-  box-shadow: 5px 5px 25px 0px rgba(0,0,0,0.2);
-}
-
-.content {
+#content {
   z-index: 4;
   position: absolute;
   top: 210px;
@@ -124,6 +104,10 @@ font-family: 'Montserrat', sans-serif;
   display:flex;
   flex-direction:column;
   width: 85%;
+}
+
+.overlay {
+  z-index: -1!important;
 }
 
 .card {
@@ -164,6 +148,10 @@ iframe {
   display: flex;
   flex-direction: column;
   text-align: center;
+}
+
+.card-auth .card-item {
+  margin: 0;
 }
 
 .span-header {
@@ -228,8 +216,10 @@ iframe {
   font-family: 'Montserrat', sans-serif;
   display: flex;
   position: relative;
-  margin-top: 1.5rem;
+  margin: 2rem 0;
   flex-direction: column;
+  max-height: 250px;
+  overflow-y: scroll;
 }
 
 .t-desc {
@@ -271,8 +261,8 @@ iframe {
 .t-title {
   text-align: left;
   flex-grow: 1;
-  font-size: 0.8rem;
-  font-weight: bold;
+  /* font-size: 0.8rem; */
+  /* font-weight: bold; */
   margin-bottom: 5px;
 }
 
@@ -319,10 +309,10 @@ iframe {
 
 .drawer span {
   display: inline-block;
-  font-size: 1.5rem;
+  /* font-size: 1.5rem; */
   color: #fff;
   transition: all 0.4s;
-  cursor: pointer;
+  cursor: auto;
 }
 
 .drawer span i:hover {
@@ -345,7 +335,7 @@ iframe {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 150px;
+  width: 200px;
   height: 50px;
   background-color: lightseagreen;
   color: white;
@@ -353,7 +343,7 @@ iframe {
   /* position: absolute; */
   margin: 0 auto;
   /* transform: rotate(-45deg); */
-  border-radius: 20px;
+  border-radius: 50px;
   box-shadow: 5px 5px 25px 0px rgba(0,0,0,0.2);
   cursor: pointer;
   transition: all 0.1s;
@@ -387,21 +377,21 @@ iframe {
   /* position: absolute; */
   background-color: lightseagreen;
   color: white;
-  padding: 10px;
+  padding: 15px;
   text-align: center;
   top: 100px;
   left: 0;
   right: 0;
   z-index: 1000;
-  border-radius: 20px;
-  width: 200px;
+  border-radius: 50px;
+  /* width: 200px; */
   margin: 0 auto;
 }
 
 .auth-message {
   font-family: Montserrat, sans-serif;
-  font-size: 1.2rem!important;
-  font-weight: 500;
+  /* font-size: 1.2rem!important; */
+  /* font-weight: 500; */
 }
 
 .blinking {
@@ -437,6 +427,7 @@ iframe {
     margin: 10px;
     border: 1px solid lightseagreen;
     border-radius: 20px;
+    font-family: Montserrat, sans-serif;
   }
 }
 
@@ -453,6 +444,7 @@ button {
   margin: 0 5px;
   padding: 10px;
   border: 1px solid lightseagreen;
+  font-family: Montserrat, sans-serif;
 }
 
 .tab-content {
@@ -465,8 +457,172 @@ button {
 }
 
 .submit {
+  padding: 25px;
   border: none;
   background: none;
   color: white;
+  font-size: 1rem;
+  font-family: Montserrat, sans-serif;
+}
+
+
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Montserrat", sans-serif;
+}
+
+.container {
+  max-width: 1050px;
+  width: 90%;
+  margin: auto;
+}
+
+nav {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  z-index: 9999;
+}
+
+.navbar {
+  width: 100%;
+  box-shadow: 0 1px 4px rgb(146 161 176 / 15%);
+}
+
+.nav-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 62px;
+}
+
+.navbar .menu-items {
+  display: flex;
+}
+
+.navbar .nav-container li {
+  list-style: none;
+}
+
+.navbar .nav-container a {
+  text-decoration: none;
+  color: #fff;
+  font-weight: 500;
+  font-size: 1.2rem;
+  padding: 0.7rem;
+}
+
+.navbar .nav-container a:hover{
+    font-weight: bolder;
+}
+
+.nav-container {
+  display: block;
+  position: relative;
+  height: 60px;
+}
+
+.nav-container .checkbox {
+  position: absolute;
+  display: block;
+  height: 32px;
+  width: 32px;
+  top: 20px;
+  left: 20px;
+  z-index: 5;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.nav-container .hamburger-lines {
+  display: block;
+  height: 26px;
+  width: 32px;
+  position: absolute;
+  top: 17px;
+  left: 20px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.nav-container .hamburger-lines .line {
+  display: block;
+  height: 4px;
+  width: 100%;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.nav-container .hamburger-lines .line1 {
+  transform-origin: 0% 0%;
+  transition: transform 0.4s ease-in-out;
+}
+
+.nav-container .hamburger-lines .line2 {
+  transition: transform 0.2s ease-in-out;
+}
+
+.nav-container .hamburger-lines .line3 {
+  transform-origin: 0% 100%;
+  transition: transform 0.4s ease-in-out;
+}
+
+.navbar .menu-items {
+  position: fixed;
+  padding-top: 120px;
+  /* box-shadow: inset 0 0 2000px rgba(255, 255, 255, .5); */
+  background-color: darkblue;
+  height: 110vh;
+  width: 50vh;
+  transform: translate(-150%);
+  display: flex;
+  flex-direction: column;
+  margin-left: -10px;
+  /* padding-left: 50px; */
+  transition: transform 0.5s ease-in-out;
+  text-align: center;
+}
+
+.navbar .menu-items li {
+  margin-bottom: 1.2rem;
   font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.logo {
+  position: absolute;
+  top: 5px;
+  right: 15px;
+  font-size: 1.2rem;
+  color: darkblue;
+}
+
+.nav-container input[type="checkbox"]:checked ~ .menu-items {
+  transform: translateX(0);
+}
+
+.nav-container input[type="checkbox"]:checked ~ .hamburger-lines .line1 {
+  transform: rotate(45deg);
+}
+
+.nav-container input[type="checkbox"]:checked ~ .hamburger-lines .line2 {
+  transform: scaleY(0);
+}
+
+.nav-container input[type="checkbox"]:checked ~ .hamburger-lines .line3 {
+  transform: rotate(-45deg);
+}
+
+.nav-container input[type="checkbox"]:checked ~ .logo{
+  display: none;
 }
