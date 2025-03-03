@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	mathRand "math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -157,6 +158,39 @@ func (a *auth) OnMount(ctx app.Context) {
 	}
 }
 
+func (a *auth) getIncome(ctx app.Context) {
+	ctx.Async(func() {
+		i, err := a.sh.OrbitDocsQuery(dbIncome, "all", "")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		income := []Income{}
+
+		if len(i) == 0 {
+			log.Fatal(err)
+		}
+
+		err = json.Unmarshal([]byte(i), &income) // Unmarshal the byte slice directly
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		ctx.Dispatch(func(ctx app.Context) {
+			doIndexer := true
+			for _, inc := range income {
+				if inc.Period == strconv.Itoa(time.Now().Year())+"/"+strconv.Itoa(int(time.Now().Month()+1)) {
+					doIndexer = false
+				}
+			}
+
+			if doIndexer {
+				a.sh.RunInflationIndexer()
+			}
+		})
+	})
+}
+
 // Function to generate a new user
 func NewUser() (*User, error) {
 	return &User{
@@ -218,6 +252,11 @@ func (a *auth) doFetch(ctx app.Context, e app.Event) {
 			},
 		}),
 	)
+
+	// days := daysRemainingInMonth(time.Now())
+	// if days >= 3 {
+	a.getIncome(ctx)
+	// }
 }
 
 func (a *auth) getUser(key, value string) User {

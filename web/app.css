@@ -145,6 +145,7 @@ iframe {
 
 .card-item {
   margin-top: 20px;
+  margin-left: -10px;
   display: flex;
   flex-direction: column;
   text-align: center;
@@ -159,6 +160,11 @@ iframe {
   font-size: 1.2rem;
   font-weight: bold;
   padding-bottom: 10px;
+}
+
+.span-body {
+  max-width: 80%;
+  margin: 0 auto;
 }
 
 /* .card-item span:first-child {
@@ -413,7 +419,9 @@ iframe {
   padding: 25px;
 
   label {
-    padding-right: 10px;
+    top: -10px;
+    position: relative;
+    font-weight: bold;
   }
 
   select {

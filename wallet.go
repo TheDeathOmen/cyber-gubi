@@ -13,6 +13,7 @@ import (
 
 const dbIncome = "income"
 const dbUserBalance = "user_balance"
+const dbInflation = "inflation"
 
 // wallet is a component that holds cyber-gubi. A component is a
 // customizable, independent, and reusable UI element. It is created by
@@ -28,16 +29,16 @@ type wallet struct {
 }
 
 type UserBalance struct {
-	ID           string    `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`                     // Unique identifier for the user
-	Balance      int       `mapstructure:"balance" json:"balance" validate:"uuid_rfc4122"`             // Balance of the user in cents
-	Income       int       `mapstructure:"income" json:"income" validate:"uuid_rfc4122"`               // Recurring income of the user in cents
-	LastReceived time.Time `mapstructure:"last_received" json:"last_received" validate:"uuid_rfc4122"` // Date when basic income was last received
+	ID           string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`                     // Unique identifier for the user
+	Balance      int    `mapstructure:"balance" json:"balance" validate:"uuid_rfc4122"`             // Balance of the user in cents
+	Income       int    `mapstructure:"income" json:"income" validate:"uuid_rfc4122"`               // Recurring income of the user in cents
+	LastReceived string `mapstructure:"last_received" json:"last_received" validate:"uuid_rfc4122"` // Date when basic income was last received
 }
 
 type Income struct {
-	ID     string    `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`       // Unique identifier for the income
-	Amount int       `mapstructure:"amount" json:"amount" validate:"uuid_rfc4122"` // Amount of the income in cents
-	Period time.Time `mapstructure:"period" json:"period" validate:"uuid_rfc4122"` // Period the income is valid for
+	ID     string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`       // Unique identifier for the income
+	Amount int    `mapstructure:"amount" json:"amount" validate:"uuid_rfc4122"` // Amount of the income in cents
+	Period string `mapstructure:"period" json:"period" validate:"uuid_rfc4122"` // Period the income is valid for
 }
 
 func (w *wallet) OnMount(ctx app.Context) {
@@ -54,9 +55,44 @@ func (w *wallet) OnMount(ctx app.Context) {
 	// w.updateIncome()
 	// w.deleteIncome()
 	// w.deleteBalances()
+	// w.deleteTransactions()
+	// w.deleteInflation()
 	// return
 
 	w.getBalance(ctx)
+}
+
+func daysRemainingInMonth(date time.Time) int {
+	// Calculate the first day of the next month
+	firstDayOfNextMonth := time.Date(date.Year(), date.Month()+1, 1, 0, 0, 0, 0, date.Location())
+
+	// Subtract one day to get the last day of the current month
+	lastDayOfMonth := firstDayOfNextMonth.Add(-time.Hour * 24)
+
+	// Set the current date to midnight
+	midnightToday := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+
+	// Calculate the difference between the last day of the month and midnight today
+	diff := lastDayOfMonth.Sub(midnightToday)
+
+	// Convert the duration to days
+	days := int(diff.Hours()/24) + 1 // Add 1 to include today
+
+	return days
+}
+
+func (w *wallet) deleteTransactions() {
+	err := w.sh.OrbitDocsDelete(dbTransaction, "all")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (w *wallet) deleteInflation() {
+	err := w.sh.OrbitDocsDelete(dbInflation, "all")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (w *wallet) deleteBalances() {
@@ -66,9 +102,9 @@ func (w *wallet) deleteBalances() {
 	}
 }
 
-func (w *wallet) getTransactionsWhereSender(ctx app.Context) {
+func (w *wallet) getTransactions(ctx app.Context) {
 	ctx.Async(func() {
-		t, err := w.sh.OrbitDocsQuery(dbTransaction, "sender_id", w.userID)
+		t, err := w.sh.OrbitDocsQuery(dbTransaction, "sender_id,receiver_id", w.userID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -87,34 +123,43 @@ func (w *wallet) getTransactionsWhereSender(ctx app.Context) {
 				w.transactions = append(w.transactions, transactions...)
 			}
 
-			w.getTransactionsWhereReceiver(ctx)
+			// w.getTransactionsWhereReceiver(ctx)
 		})
 	})
 }
 
-func (w *wallet) getTransactionsWhereReceiver(ctx app.Context) {
+func (w *wallet) getInflation(ctx app.Context) {
 	ctx.Async(func() {
-		t, err := w.sh.OrbitDocsQuery(dbTransaction, "receiver_id", w.userID)
+		_, err := w.sh.OrbitDocsQuery(dbInflation, "all", "")
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		transactions := []Transaction{}
-
-		if len(t) != 0 {
-			err = json.Unmarshal(t, &transactions) // Unmarshal the byte slice directly
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		ctx.Dispatch(func(ctx app.Context) {
-			if len(transactions) > 0 {
-				w.transactions = append(w.transactions, transactions...)
-			}
-		})
 	})
 }
+
+// func (w *wallet) getTransactionsWhereReceiver(ctx app.Context) {
+// 	ctx.Async(func() {
+// 		t, err := w.sh.OrbitDocsQuery(dbTransaction, "receiver_id", w.userID)
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+
+// 		transactions := []Transaction{}
+
+// 		if len(t) != 0 {
+// 			err = json.Unmarshal(t, &transactions) // Unmarshal the byte slice directly
+// 			if err != nil {
+// 				log.Fatal(err)
+// 			}
+// 		}
+
+// 		ctx.Dispatch(func(ctx app.Context) {
+// 			if len(transactions) > 0 {
+// 				w.transactions = append(w.transactions, transactions...)
+// 			}
+// 		})
+// 	})
+// }
 
 func (w *wallet) getBalance(ctx app.Context) {
 	ctx.Async(func() {
@@ -123,10 +168,15 @@ func (w *wallet) getBalance(ctx app.Context) {
 			log.Fatal(err)
 		}
 
+		// days := daysRemainingInMonth(time.Now())
+
 		if len(b) == 0 {
 			ctx.Dispatch(func(ctx app.Context) {
 				w.userBalance = UserBalance{}
+				// if there are 3 or less days remaining till the end of the month including today receive income
+				// if days >= 3 {
 				w.getIncome(ctx)
+				// }
 			})
 			return
 		}
@@ -143,10 +193,13 @@ func (w *wallet) getBalance(ctx app.Context) {
 			ctx.SetState("balance", w.userBalance)
 
 			// check if recurring income was received for this month
-			if w.userBalance.LastReceived.Year() != time.Now().Year() && w.userBalance.LastReceived.Month() != time.Now().Month() {
+			if w.userBalance.LastReceived != strconv.Itoa(time.Now().Year())+"/"+strconv.Itoa(int(time.Now().Month())) {
+				// if there are 3 or less days remaining till the end of the month including today receive income
+				// if days >= 3 {
 				w.getIncome(ctx)
+				// }
 			} else {
-				w.getTransactionsWhereSender(ctx)
+				w.getTransactions(ctx)
 			}
 		})
 	})
@@ -172,7 +225,7 @@ func (w *wallet) updateBalance(ctx app.Context) {
 		}
 
 		ctx.Dispatch(func(ctx app.Context) {
-			w.getTransactionsWhereSender(ctx)
+			w.getTransactions(ctx)
 		})
 	})
 }
@@ -181,7 +234,7 @@ func (w *wallet) updateIncome() {
 	income := &Income{
 		ID:     uuid.NewString(),
 		Amount: 100000,
-		Period: time.Now(),
+		Period: strconv.Itoa(time.Now().Year()) + "/" + strconv.Itoa(int(time.Now().Month())),
 	}
 
 	incomeJSON, err := json.Marshal(income)
@@ -221,16 +274,21 @@ func (w *wallet) getIncome(ctx app.Context) {
 		}
 
 		ctx.Dispatch(func(ctx app.Context) {
-			w.income = income[0]
+			for _, inc := range income {
+				if inc.Period == strconv.Itoa(time.Now().Year())+"/"+strconv.Itoa(int(time.Now().Month())) {
+					w.income = inc
+				}
+			}
+
 			// check if there is a matching income year and month to current moment
-			if w.income.Period.Year() == time.Now().Year() && w.income.Period.Month() == time.Now().Month() {
+			if w.income.Period == strconv.Itoa(time.Now().Year())+"/"+strconv.Itoa(int(time.Now().Month())) {
 				w.userBalance.Balance = (w.userBalance.Balance + w.income.Amount)
 				w.userBalance.Income = w.income.Amount
-				w.userBalance.LastReceived = time.Now()
+				w.userBalance.LastReceived = strconv.Itoa(time.Now().Year()) + "/" + strconv.Itoa(int(time.Now().Month()))
 				ctx.SetState("balance", w.userBalance)
 				w.updateBalance(ctx)
 			} else {
-				w.getTransactionsWhereSender(ctx)
+				w.getTransactions(ctx)
 			}
 		})
 	})
@@ -268,7 +326,7 @@ func (w *wallet) Render() app.UI {
 					app.Div().Class("lower-row").Body(
 						app.Div().Class("card-item").Body(
 							app.Span().Class("span-header").Text("My Payment ID"),
-							app.Span().Text(w.userID),
+							app.Span().Class("span-body").Text(w.userID),
 						),
 					),
 				),
@@ -284,11 +342,11 @@ func (w *wallet) Render() app.UI {
 									app.Span().Text(w.transactions[i].Timestamp.Format("2006-01-02 15:04:05")),
 								),
 							),
-							app.Div().Class("t-amount").Body(
+							app.Div().Class("t-price").Body(
 								app.If(w.transactions[i].SenderID == w.userID, func() app.UI {
-									return app.Span().Text("-" + strconv.Itoa(w.transactions[i].Amount) + " GUBI")
+									return app.Span().Text("-" + strconv.Itoa(w.transactions[i].Price*w.transactions[i].Amount/100) + " GUBI")
 								}).Else(func() app.UI {
-									return app.Span().Text("+" + strconv.Itoa(w.transactions[i].Amount) + " GUBI")
+									return app.Span().Text("+" + strconv.Itoa(w.transactions[i].Price*w.transactions[i].Amount/100) + " GUBI")
 								}),
 							),
 						)

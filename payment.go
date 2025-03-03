@@ -32,6 +32,8 @@ type Transaction struct {
 	ReceiverID string `mapstructure:"receiver_id" json:"receiver_id" validate:"uuid_rfc4122"` // Recipient user id
 	ProductOrService
 	Timestamp time.Time `mapstructure:"timestamp" json:"timestamp" validate:"uuid_rfc4122"` // Timestamp of the transaction
+	Date      string    `mapstructure:"date" json:"date" validate:"uuid_rfc4122"`           // Date of the transaction in the format YY/MM
+	Processed bool      `mapstructure:"processed" json:"processed" validate:"uuid_rfc4122"` // Flag if it was already processed by inflation indexer
 }
 
 type ProductOrService struct {
@@ -111,12 +113,12 @@ func (p *payment) getBalances(ctx app.Context) {
 	})
 }
 
-func (p *payment) updateBalance(userID string, balance, income int, timestamp time.Time) error {
+func (p *payment) updateBalance(userID string, balance, income int, date string) error {
 	userBalance := UserBalance{
 		ID:           userID,
 		Balance:      balance,
 		Income:       income,
-		LastReceived: timestamp,
+		LastReceived: date,
 	}
 
 	userBalanceJSON, err := json.Marshal(userBalance)
@@ -182,6 +184,7 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 		transaction.SenderID = p.userID
 		transaction.ReceiverID = paymentID
 		transaction.Timestamp = time.Now()
+		transaction.Date = strconv.Itoa(time.Now().Year()) + "/" + strconv.Itoa(int(time.Now().Month()))
 		if tabActive == "product" {
 			productName := app.Window().GetElementByID("product-name").Get("value").String()
 			productPriceInt, err := strconv.Atoi(app.Window().GetElementByID("product-price").Get("value").String())
@@ -310,8 +313,8 @@ func (p *payment) Render() app.UI {
 									Class("tab-content").
 									Body(
 										app.Input().ID("product-name").Type("text").Name("product-name").Placeholder("Product name").Required(true),
-										app.Input().ID("product-price").Type("number").Name("product-price").Placeholder("Single price").Required(true),
-										app.Input().ID("product-amount").Type("number").Name("product-amount").Step(1).Placeholder("Number of products").Required(true),
+										app.Input().ID("product-price").Type("number").Min(1).Name("product-price").Placeholder("Single price").Required(true),
+										app.Input().ID("product-amount").Type("number").Min(1).Name("product-amount").Step(1).Placeholder("Number of products").Required(true),
 									),
 
 								// Service Tab Content
@@ -320,8 +323,8 @@ func (p *payment) Render() app.UI {
 									Class("tab-content").
 									Body(
 										app.Input().ID("service-name").Type("text").Name("service-name").Placeholder("Service name"),
-										app.Input().ID("service-price").Type("number").Name("service-price").Placeholder("Price per hour"),
-										app.Input().ID("service-amount").Type("number").Name("service-amount").Step(1).Placeholder("Number of hours"),
+										app.Input().ID("service-price").Type("number").Min(1).Name("service-price").Placeholder("Price per hour"),
+										app.Input().ID("service-amount").Type("number").Min(1).Name("service-amount").Step(1).Placeholder("Number of hours"),
 									).Hidden(true),
 								app.Div().Class("drawer drawer-pay").Body(
 									app.Div().Class("menu-btn").Body(
