@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"sort"
 	"strconv"
 	"time"
 
@@ -120,10 +121,12 @@ func (w *wallet) getTransactions(ctx app.Context) {
 
 		ctx.Dispatch(func(ctx app.Context) {
 			if len(transactions) > 0 {
+				sort.Slice(transactions, func(i, j int) bool {
+					return transactions[i].Timestamp.After(transactions[j].Timestamp)
+				})
+
 				w.transactions = append(w.transactions, transactions...)
 			}
-
-			// w.getTransactionsWhereReceiver(ctx)
 		})
 	})
 }
@@ -136,30 +139,6 @@ func (w *wallet) getInflation(ctx app.Context) {
 		}
 	})
 }
-
-// func (w *wallet) getTransactionsWhereReceiver(ctx app.Context) {
-// 	ctx.Async(func() {
-// 		t, err := w.sh.OrbitDocsQuery(dbTransaction, "receiver_id", w.userID)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-
-// 		transactions := []Transaction{}
-
-// 		if len(t) != 0 {
-// 			err = json.Unmarshal(t, &transactions) // Unmarshal the byte slice directly
-// 			if err != nil {
-// 				log.Fatal(err)
-// 			}
-// 		}
-
-// 		ctx.Dispatch(func(ctx app.Context) {
-// 			if len(transactions) > 0 {
-// 				w.transactions = append(w.transactions, transactions...)
-// 			}
-// 		})
-// 	})
-// }
 
 func (w *wallet) getBalance(ctx app.Context) {
 	ctx.Async(func() {
@@ -298,6 +277,14 @@ func (w *wallet) goToPayments(ctx app.Context, e app.Event) {
 	ctx.Navigate("payment")
 }
 
+func (w *wallet) showTransactionDetails(ctx app.Context, e app.Event) {
+	ctx.JSSrc().Call("setAttribute", "style", "height: auto")
+}
+
+func (w *wallet) hideTransactionDetails(ctx app.Context, e app.Event) {
+	ctx.JSSrc().Call("setAttribute", "style", "height: 55px")
+}
+
 // The Render method is where the component appearance is defined. Here, a
 // wallet is displayed.
 func (w *wallet) Render() app.UI {
@@ -336,17 +323,41 @@ func (w *wallet) Render() app.UI {
 						return app.Div().Class("transaction").Body(
 							app.Div().Class("t-details").Body(
 								app.Div().Class("t-title").Body(
-									app.Span().Text(w.transactions[i].Name),
+									app.If(w.transactions[i].SenderID == w.userID, func() app.UI {
+										return app.Span().Text("Purchase ID: " + w.transactions[i].ID)
+									}).Else(func() app.UI {
+										return app.Span().Text("Sale ID: " + w.transactions[i].ID)
+									}),
 								),
 								app.Div().Class("t-time").Body(
 									app.Span().Text(w.transactions[i].Timestamp.Format("2006-01-02 15:04:05")),
 								),
-							),
+								app.Div().Class("t-more-details").Body(
+									app.Div().Class("col-1").Body(
+										app.Span().Text("Item"),
+										app.Range(w.transactions[i].ProductsServices).Slice(func(n int) app.UI {
+											return app.Span().Text(w.transactions[i].ProductsServices[n].Name)
+										}),
+									),
+									app.Div().Class("col-2").Body(
+										app.Span().Text("Amount"),
+										app.Range(w.transactions[i].ProductsServices).Slice(func(n int) app.UI {
+											return app.Span().Text(w.transactions[i].ProductsServices[n].Amount)
+										}),
+									),
+									app.Div().Class("col-3").Body(
+										app.Span().Text("Price"),
+										app.Range(w.transactions[i].ProductsServices).Slice(func(n int) app.UI {
+											return app.Span().Text(w.transactions[i].ProductsServices[n].Price)
+										}),
+									),
+								),
+							).OnMouseOver(w.showTransactionDetails).OnMouseLeave(w.hideTransactionDetails),
 							app.Div().Class("t-price").Body(
 								app.If(w.transactions[i].SenderID == w.userID, func() app.UI {
-									return app.Span().Text("-" + strconv.Itoa(w.transactions[i].Price*w.transactions[i].Amount/100) + " GUBI")
+									return app.Span().Text("-" + strconv.Itoa(w.transactions[i].TotalCost/100) + " GUBI")
 								}).Else(func() app.UI {
-									return app.Span().Text("+" + strconv.Itoa(w.transactions[i].Price*w.transactions[i].Amount/100) + " GUBI")
+									return app.Span().Text("+" + strconv.Itoa(w.transactions[i].TotalCost/100) + " GUBI")
 								}),
 							),
 						)

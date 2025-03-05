@@ -223,6 +223,7 @@ iframe {
   display: flex;
   position: relative;
   margin: 2rem 0;
+  padding-top: 10px;
   flex-direction: column;
   max-height: 250px;
   overflow-y: scroll;
@@ -237,7 +238,7 @@ iframe {
 }
 
 .transaction {
-  cursor: default;
+  cursor: pointer;
   padding: 10px 20px;
   display: flex;
   justify-content: space-between;
@@ -250,7 +251,19 @@ iframe {
 }
 
 .t-details {
-  width: 55%;
+  width: 85%;
+  height: 55px;
+  overflow: hidden;
+}
+
+.t-more-details {
+  margin-left: -15px;
+  padding-top: 10px;
+  font-size: 0.8rem;
+}
+
+.t-price {
+  text-align: center;
 }
 
 .t-icon-container {
@@ -267,7 +280,7 @@ iframe {
 .t-title {
   text-align: left;
   flex-grow: 1;
-  /* font-size: 0.8rem; */
+  font-size: 0.8rem;
   /* font-weight: bold; */
   margin-bottom: 5px;
 }
@@ -356,6 +369,11 @@ iframe {
   opacity: 0.9;
 }
 
+.menu-add-item {
+  width: 100px!important;
+  margin-top: 25px;
+}
+
 .btn-register {
   top: 50px;
 }
@@ -416,7 +434,9 @@ iframe {
 }
 
 #pay-form {
-  padding: 25px;
+  padding-top: 20px;
+  padding-left: 25px;
+  padding-right: 25px;
 
   label {
     top: -10px;
@@ -457,6 +477,8 @@ button {
 
 .tab-content {
   margin-top: 15px;
+  overflow-y: scroll;
+  max-height: 170px;
 }
 
 .tab-active {
@@ -633,4 +655,11 @@ nav {
 
 .nav-container input[type="checkbox"]:checked ~ .logo{
   display: none;
+}
+
+.col-1, .col-2, .col-3 {
+  display: inline-grid;
+  float: left;
+  width: 33.3%;
+  text-align: center;
 }

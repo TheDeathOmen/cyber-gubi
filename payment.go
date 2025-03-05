@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -19,24 +18,30 @@ const dbTransaction = "transaction"
 // embedding app.Compo into a struct.
 type payment struct {
 	app.Compo
-	sh           *shell.Shell
-	loggedIn     bool
-	userID       string
-	userBalance  UserBalance
-	userBalances []UserBalance
+	sh            *shell.Shell
+	loggedIn      bool
+	userID        string
+	userBalance   UserBalance
+	userBalances  []UserBalance
+	productsIndex []int
+	servicesIndex []int
+	products      []ProductService
+	services      []ProductService
+	activeTab     string
 }
 
 type Transaction struct {
-	ID         string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`                 // Unique identifier for the transaction
-	SenderID   string `mapstructure:"sender_id" json:"sender_id" validate:"uuid_rfc4122"`     // Sender user id
-	ReceiverID string `mapstructure:"receiver_id" json:"receiver_id" validate:"uuid_rfc4122"` // Recipient user id
-	ProductOrService
-	Timestamp time.Time `mapstructure:"timestamp" json:"timestamp" validate:"uuid_rfc4122"` // Timestamp of the transaction
-	Date      string    `mapstructure:"date" json:"date" validate:"uuid_rfc4122"`           // Date of the transaction in the format YY/MM
-	Processed bool      `mapstructure:"processed" json:"processed" validate:"uuid_rfc4122"` // Flag if it was already processed by inflation indexer
+	ID               string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`                 // Unique identifier for the transaction
+	SenderID         string `mapstructure:"sender_id" json:"sender_id" validate:"uuid_rfc4122"`     // Sender user id
+	ReceiverID       string `mapstructure:"receiver_id" json:"receiver_id" validate:"uuid_rfc4122"` // Recipient user id
+	ProductsServices []ProductService
+	TotalCost        int       `mapstructure:"total_cost" json:"total_cost" validate:"uuid_rfc4122"` // Total cost of transaction
+	Timestamp        time.Time `mapstructure:"timestamp" json:"timestamp" validate:"uuid_rfc4122"`   // Timestamp of the transaction
+	Date             string    `mapstructure:"date" json:"date" validate:"uuid_rfc4122"`             // Date of the transaction in the format YY/MM
+	Processed        bool      `mapstructure:"processed" json:"processed" validate:"uuid_rfc4122"`   // Flag if it was already processed by inflation indexer
 }
 
-type ProductOrService struct {
+type ProductService struct {
 	ID     string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"` // Unique identifier for the product
 	Name   string `mapstructure:"name" json:"name" validate:"uuid_rfc4122"`
 	Price  int    `mapstructure:"price" json:"price" validate:"uuid_rfc4122"`
@@ -46,6 +51,14 @@ type ProductOrService struct {
 func (p *payment) OnMount(ctx app.Context) {
 	sh := shell.NewShell("localhost:5001")
 	p.sh = sh
+
+	// set default number of product inputs
+	p.productsIndex = []int{1}
+	p.products = make([]ProductService, 1)
+	// set default number of service inputs
+	p.servicesIndex = []int{1}
+	p.services = make([]ProductService, 1)
+	p.activeTab = "product"
 
 	ctx.GetState("loggedIn", &p.loggedIn)
 	if !p.loggedIn {
@@ -150,8 +163,11 @@ func (p *payment) storeTransaction(transaction Transaction) error {
 
 func (p *payment) showProduct(ctx app.Context, e app.Event) {
 	e.PreventDefault()
-	app.Window().GetElementByID("service-name").Call("removeAttribute", "required")
-	app.Window().GetElementByID("service-amount").Call("removeAttribute", "required")
+	p.activeTab = "product"
+	elems := app.Window().Get("document").Call("querySelectorAll", ".service")
+	for i := 0; i < elems.Length(); i++ {
+		elems.Index(i).Call("removeAttribute", "required")
+	}
 	app.Window().GetElementByID("tab-service").Get("classList").Call("remove", "tab-active")
 	ctx.JSSrc().Get("classList").Call("add", "tab-active")
 	// Hide Service Tab and show Product Tab
@@ -161,66 +177,79 @@ func (p *payment) showProduct(ctx app.Context, e app.Event) {
 
 func (p *payment) showService(ctx app.Context, e app.Event) {
 	e.PreventDefault()
-	app.Window().GetElementByID("product-name").Call("removeAttribute", "required")
-	app.Window().GetElementByID("product-price").Call("removeAttribute", "required")
-	app.Window().GetElementByID("product-amount").Call("removeAttribute", "required")
+	p.activeTab = "service"
+	elemsProduct := app.Window().Get("document").Call("querySelectorAll", ".product")
+	for i := 0; i < elemsProduct.Length(); i++ {
+		elemsProduct.Index(i).Call("removeAttribute", "required")
+	}
 	app.Window().GetElementByID("tab-product").Get("classList").Call("remove", "tab-active")
 	ctx.JSSrc().Get("classList").Call("add", "tab-active")
 	// Hide Product Tab and show Service Tab
 	app.Window().GetElementByID("product-tab").Call("setAttribute", "style", "display: none; ")
-	app.Window().GetElementByID("service-name").Call("setAttribute", "required", true)
-	app.Window().GetElementByID("service-amount").Call("setAttribute", "required", true)
+	elems := app.Window().Get("document").Call("querySelectorAll", ".service")
+	for i := 0; i < elems.Length(); i++ {
+		elems.Index(i).Call("setAttribute", "required", true)
+	}
 	app.Window().GetElementByID("service-tab").Call("setAttribute", "style", "display: block")
+}
+
+func (p *payment) addProduct(ctx app.Context, e app.Event) {
+	e.PreventDefault()
+
+	p.products = append(p.products, ProductService{})
+	p.productsIndex = append(p.productsIndex, len(p.productsIndex)+1)
+}
+
+func (p *payment) removeProduct(ctx app.Context, e app.Event) {
+	e.PreventDefault()
+	p.productsIndex = p.productsIndex[:len(p.productsIndex)-1]
+	p.products = p.products[:len(p.products)-1]
+}
+
+func (p *payment) addService(ctx app.Context, e app.Event) {
+	e.PreventDefault()
+
+	p.services = append(p.services, ProductService{})
+	p.servicesIndex = append(p.servicesIndex, len(p.servicesIndex)+1)
+}
+
+func (p *payment) removeService(ctx app.Context, e app.Event) {
+	e.PreventDefault()
+	p.servicesIndex = p.servicesIndex[:len(p.servicesIndex)-1]
+	p.services = p.services[:len(p.services)-1]
 }
 
 func (p *payment) doPayment(ctx app.Context, e app.Event) {
 	e.PreventDefault()
+
+	log.Println(p.products)
+
 	valid := app.Window().GetElementByID("pay-form").Call("reportValidity").Bool()
 	if valid {
 		tabActive := app.Window().Get("document").Call("getElementsByClassName", "tab-active").Index(0).Get("value").String()
-		paymentID := app.Window().GetElementByID("payment-id").Get("value").String()
+		receivedID := app.Window().GetElementByID("receiver-id").Get("value").String()
 		transaction := Transaction{}
 		transaction.ID = uuid.NewString()
 		transaction.SenderID = p.userID
-		transaction.ReceiverID = paymentID
+		transaction.ReceiverID = receivedID
 		transaction.Timestamp = time.Now()
 		transaction.Date = strconv.Itoa(time.Now().Year()) + "/" + strconv.Itoa(int(time.Now().Month()))
 		if tabActive == "product" {
-			productName := app.Window().GetElementByID("product-name").Get("value").String()
-			productPriceInt, err := strconv.Atoi(app.Window().GetElementByID("product-price").Get("value").String())
-			if err != nil {
-				log.Fatal(err)
-			}
-			productPrice := productPriceInt * 100 // in cents
-			productAmountInt, err := strconv.Atoi(app.Window().GetElementByID("product-amount").Get("value").String())
-			if err != nil {
-				log.Fatal(err)
-			}
-			productAmount := productAmountInt
-			transaction.ProductOrService.Name = productName
-			transaction.ProductOrService.Price = productPrice
-			transaction.ProductOrService.Amount = productAmount
-		} else if tabActive == "service" {
-			serviceName := app.Window().GetElementByID("service-name").Get("value").String()
-			servicePriceInt, err := strconv.Atoi(app.Window().GetElementByID("service-price").Get("value").String())
-			if err != nil {
-				log.Fatal(err)
-			}
-			servicePrice := servicePriceInt * 100 // in cents
-			serviceAmountInt, err := strconv.Atoi(app.Window().GetElementByID("service-amount").Get("value").String())
-			if err != nil {
-				log.Fatal(err)
-			}
-			serviceAmount := serviceAmountInt // full hours only
-			transaction.ProductOrService.Name = serviceName
-			transaction.ProductOrService.Price = servicePrice
-			transaction.ProductOrService.Amount = serviceAmount
+			transaction.ProductsServices = p.products
 		} else {
-			log.Fatal(errors.New("no tab selected"))
+			transaction.ProductsServices = p.services
 		}
 
+		var totalCost int
+
+		for _, ps := range transaction.ProductsServices {
+			totalCost += ps.Price * 100 * ps.Amount
+		}
+
+		transaction.TotalCost = totalCost
+
 		// update sender balance
-		err := p.updateBalance(p.userID, p.userBalance.Balance-(transaction.ProductOrService.Price*transaction.ProductOrService.Amount), p.userBalance.Income, p.userBalance.LastReceived)
+		err := p.updateBalance(p.userID, p.userBalance.Balance-totalCost, p.userBalance.Income, p.userBalance.LastReceived)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -230,10 +259,10 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 			log.Fatal(err)
 		}
 		// update receiver balance
-		err = p.updateBalance(transaction.ReceiverID, receiverBalance.Balance+(transaction.ProductOrService.Price*transaction.ProductOrService.Amount), receiverBalance.Income, receiverBalance.LastReceived)
+		err = p.updateBalance(transaction.ReceiverID, receiverBalance.Balance+totalCost, receiverBalance.Income, receiverBalance.LastReceived)
 		if err != nil {
 			// rollback sender balance
-			err := p.updateBalance(p.userID, p.userBalance.Balance+(transaction.ProductOrService.Price*transaction.ProductOrService.Amount), p.userBalance.Income, p.userBalance.LastReceived)
+			err := p.updateBalance(p.userID, p.userBalance.Balance+totalCost, p.userBalance.Income, p.userBalance.LastReceived)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -243,17 +272,20 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 		err = p.storeTransaction(transaction)
 		if err != nil {
 			// rollback sender balance
-			err = p.updateBalance(p.userID, p.userBalance.Balance+(transaction.ProductOrService.Price*transaction.ProductOrService.Amount), p.userBalance.Income, p.userBalance.LastReceived)
+			err = p.updateBalance(p.userID, p.userBalance.Balance+totalCost, p.userBalance.Income, p.userBalance.LastReceived)
 			if err != nil {
 				log.Fatal(err)
 			}
 			// rollback receiver balance
-			err = p.updateBalance(transaction.ReceiverID, receiverBalance.Balance-(transaction.ProductOrService.Price*transaction.ProductOrService.Amount), receiverBalance.Income, receiverBalance.LastReceived)
+			err = p.updateBalance(transaction.ReceiverID, receiverBalance.Balance-totalCost, receiverBalance.Income, receiverBalance.LastReceived)
 			if err != nil {
 				log.Fatal(err)
 			}
 			return
 		}
+
+		p.userBalance.Balance = p.userBalance.Balance - totalCost
+		ctx.Update()
 
 		app.Window().Get("alert").Invoke("payment successful!")
 	}
@@ -282,8 +314,8 @@ func (p *payment) Render() app.UI {
 						app.Div().Class("card-item").Body(
 							app.Span().Class("span-header").Text("Make a payment"),
 							app.Form().ID("pay-form").Body(
-								app.Label().For("payment-id").Text("Payment ID:"),
-								app.Select().ID("payment-id").Name("payment-id").Body(
+								app.Label().For("receiver-id").Text("Receiver ID:"),
+								app.Select().ID("receiver-id").Name("receiver-id").Body(
 									app.Range(p.userBalances).Slice(func(i int) app.UI {
 										return app.Option().Value(p.userBalances[i].ID).Text(p.userBalances[i].ID)
 									}),
@@ -312,20 +344,44 @@ func (p *payment) Render() app.UI {
 									ID("product-tab").
 									Class("tab-content").
 									Body(
-										app.Input().ID("product-name").Type("text").Name("product-name").Placeholder("Product name").Required(true),
-										app.Input().ID("product-price").Type("number").Min(1).Name("product-price").Placeholder("Single price").Required(true),
-										app.Input().ID("product-amount").Type("number").Min(1).Name("product-amount").Step(1).Placeholder("Number of products").Required(true),
+										app.Range(p.productsIndex).Slice(func(i int) app.UI {
+											log.Println(p.products)
+											return app.Div().Body(
+												app.Input().ID("product-name-"+strconv.Itoa(i)).Class("product").Type("text").Name("product-name").Placeholder("Product name").Required(true).OnChange(p.ValueTo(&p.products[i].Name)),
+												app.Input().ID("product-price-"+strconv.Itoa(i)).Class("product").Type("number").Min(1).Name("product-price").Placeholder("Single price").Required(true).OnChange(p.ValueTo(&p.products[i].Price)),
+												app.Input().ID("product-amount-"+strconv.Itoa(i)).Class("product").Type("number").Min(1).Name("product-amount").Step(1).Placeholder("Number of products").Required(true).OnChange(p.ValueTo(&p.products[i].Amount)),
+											)
+										}),
 									),
-
 								// Service Tab Content
 								app.Div().
 									ID("service-tab").
 									Class("tab-content").
 									Body(
-										app.Input().ID("service-name").Type("text").Name("service-name").Placeholder("Service name"),
-										app.Input().ID("service-price").Type("number").Min(1).Name("service-price").Placeholder("Price per hour"),
-										app.Input().ID("service-amount").Type("number").Min(1).Name("service-amount").Step(1).Placeholder("Number of hours"),
+										app.Range(p.servicesIndex).Slice(func(i int) app.UI {
+											log.Println(p.services)
+											return app.Div().Body(
+												app.Input().ID("service-name").Class("service").Type("text").Name("service-name").Placeholder("Service name").OnChange(p.ValueTo(&p.services[i].Name)),
+												app.Input().ID("service-price").Class("service").Type("number").Min(1).Name("service-price").Placeholder("Price per hour").OnChange(p.ValueTo(&p.services[i].Name)),
+												app.Input().ID("service-amount").Class("service").Type("number").Min(1).Name("service-amount").Step(1).Placeholder("Number of hours").OnChange(p.ValueTo(&p.services[i].Name)),
+											)
+										}),
 									).Hidden(true),
+								app.If(p.activeTab == "product", func() app.UI {
+									return app.Div().Class("menu-btn menu-add-item").Body(
+										app.Button().Class("submit").Text("+").OnClick(p.addProduct),
+										app.If(len(p.productsIndex) > 1, func() app.UI {
+											return app.Button().Class("submit").Text("-").OnClick(p.removeProduct)
+										}),
+									)
+								}).Else(func() app.UI {
+									return app.Div().Class("menu-btn menu-add-item").Body(
+										app.Button().Class("submit").Text("+").OnClick(p.addService),
+										app.If(len(p.servicesIndex) > 1, func() app.UI {
+											return app.Button().Class("submit").Text("-").OnClick(p.removeService)
+										}),
+									)
+								}),
 								app.Div().Class("drawer drawer-pay").Body(
 									app.Div().Class("menu-btn").Body(
 										app.Button().Class("submit").Type("submit").Text("Pay").OnClick(p.doPayment),
