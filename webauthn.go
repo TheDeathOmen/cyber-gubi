@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	mathRand "math/rand"
 	"strconv"
@@ -155,6 +156,20 @@ func (a *auth) OnMount(ctx app.Context) {
 	if a.webAuthn, err = webauthn.New(wconfig); err != nil {
 		app.Window().Get("alert").Invoke("webauthn instantiate error: ", err.Error())
 		log.Fatal(err)
+	}
+
+	var termsAccepted bool
+
+	ctx.ObserveState("termsAccepted", &termsAccepted).
+		OnChange(func() {
+			fmt.Println("termsAccepted was changed at", time.Now())
+			a.doFetch(ctx, app.Event{})
+		})
+
+	if !termsAccepted {
+		app.Window().GetElementByID("main-menu").Call("click")
+	} else {
+		a.doFetch(ctx, app.Event{})
 	}
 }
 
@@ -543,6 +558,7 @@ func (a *auth) Render() app.UI {
 	return app.Div().Class("container").Body(
 		app.Div().Class("mobile").Body(
 			app.Div().Class("header").Body(
+				newNav(),
 				app.Div().Class("header-summary").Body(
 					app.Span().ID("logo").Text("cyber-gubi"),
 					app.Div().Class("summary-text").Body(
@@ -560,7 +576,7 @@ func (a *auth) Render() app.UI {
 					app.Div().Class("lower-row").Body(
 						app.Div().Class("card-item").Body(
 							app.Div().Class("container").Body(
-								app.Video().ID("video").Width(200).Height(150).AutoPlay(true).Muted(true).OnPlay(a.doFetch),
+								app.Video().ID("video").Width(200).Height(150).AutoPlay(true).Muted(true),
 								app.Canvas().ID("canvas").Width(200).Height(150),
 							),
 						),
