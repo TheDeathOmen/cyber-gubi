@@ -16,6 +16,7 @@ func newNav() *nav {
 
 func (n *nav) OnMount(ctx app.Context) {
 	ctx.GetState("loggedIn", &n.loggedIn)
+	ctx.GetState("termsAccepted", &n.termsAccepted)
 }
 
 func (n *nav) doOverlay(ctx app.Context, e app.Event) {

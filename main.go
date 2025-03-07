@@ -30,6 +30,9 @@ func main() {
 	app.Route("/auth", func() app.Composer { return &auth{} })
 	app.Route("/wallet", func() app.Composer { return &wallet{} })
 	app.Route("/payment", func() app.Composer { return &payment{} })
+	app.Route("/terms", func() app.Composer { return &terms{} })
+	app.Route("/privacy", func() app.Composer { return &privacy{} })
+	app.Route("/cookie", func() app.Composer { return &cookie{} })
 
 	// Once the routes set up, the next thing to do is to either launch the app
 	// or the server that serves the app.
@@ -83,6 +86,30 @@ func main() {
 	})
 
 	http.Handle("/payment", &app.Handler{
+		Name:        "Cyber GUBI",
+		Description: "An unconditional universal basic income",
+		Styles: []string{
+			"/web/app.css", // Loads app.css file.
+		},
+	})
+
+	http.Handle("/terms", &app.Handler{
+		Name:        "Cyber GUBI",
+		Description: "An unconditional universal basic income",
+		Styles: []string{
+			"/web/app.css", // Loads app.css file.
+		},
+	})
+
+	http.Handle("/privacy", &app.Handler{
+		Name:        "Cyber GUBI",
+		Description: "An unconditional universal basic income",
+		Styles: []string{
+			"/web/app.css", // Loads app.css file.
+		},
+	})
+
+	http.Handle("/cookie", &app.Handler{
 		Name:        "Cyber GUBI",
 		Description: "An unconditional universal basic income",
 		Styles: []string{

@@ -140,15 +140,20 @@ iframe {
   display: flex;
   justify-content: space-evenly;
   /* padding-bottom: 25px; */
-  padding-top: 10px
+  padding-top: 25px
 }
 
 .card-item {
-  margin-top: 20px;
-  margin-left: -10px;
+  /* margin-top: 25px; */
+  /* margin-left: -10px; */
   display: flex;
   flex-direction: column;
   text-align: center;
+}
+
+.card-terms {
+  height: 500px;
+  overflow-y: scroll;
 }
 
 .card-auth .card-item {
@@ -165,6 +170,13 @@ iframe {
 .span-body {
   max-width: 80%;
   margin: 0 auto;
+}
+
+.span-docs {
+  max-width: 80%;
+  margin: 0 auto;
+  text-align: left;
+  padding: 10px 0;
 }
 
 /* .card-item span:first-child {
@@ -434,8 +446,8 @@ iframe {
 
 #pay-form {
   padding-top: 20px;
-  padding-left: 25px;
-  padding-right: 25px;
+  /* padding-left: 25px;
+  padding-right: 25px; */
 
   label {
     top: -10px;
