@@ -1,13 +1,19 @@
 package main
 
 import (
+	"encoding/base64"
+	"log"
+
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
+	shell "github.com/stateless-minds/go-ipfs-api"
 )
 
 type nav struct {
 	app.Compo
+	sh            *shell.Shell
 	loggedIn      bool
 	termsAccepted bool
+	userID        string
 }
 
 func newNav() *nav {
@@ -16,6 +22,12 @@ func newNav() *nav {
 
 func (n *nav) OnMount(ctx app.Context) {
 	ctx.GetState("loggedIn", &n.loggedIn)
+	if n.loggedIn {
+		ctx.GetState("userID", &n.userID)
+		sh := shell.NewShell("localhost:5001")
+		n.sh = sh
+	}
+
 	ctx.GetState("termsAccepted", &n.termsAccepted)
 }
 
@@ -27,6 +39,30 @@ func (n *nav) acceptTerms(ctx app.Context, e app.Event) {
 	n.termsAccepted = true
 	ctx.SetState("termsAccepted", true).Persist()
 	app.Window().GetElementByID("main-menu").Call("click")
+}
+
+func (n *nav) deleteAccount(ctx app.Context, e app.Event) {
+	e.PreventDefault()
+	n.deleteUser()
+	n.deleteBalance()
+	ctx.DelState("termsAccepted")
+	ctx.Reload()
+
+}
+
+func (n *nav) deleteUser() {
+	userId := base64.StdEncoding.EncodeToString([]byte(n.userID))
+	err := n.sh.OrbitDocsDelete(dbUser, string(userId))
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (n *nav) deleteBalance() {
+	err := n.sh.OrbitDocsDelete(dbUserBalance, n.userID)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (n *nav) Render() app.UI {
@@ -74,7 +110,7 @@ func (n *nav) Render() app.UI {
 							app.A().Href("/cookie").Text("Cookie"),
 						),
 						app.Li().Body(
-							app.A().Href("/delete-account").Text("Delete Account"),
+							app.A().Text("Delete Account").OnClick(n.deleteAccount),
 						),
 					)
 				}),

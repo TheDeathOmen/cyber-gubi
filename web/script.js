@@ -45,7 +45,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
     const loginButton = window.parent.document.getElementById('login-btn');
     const confidenceThreshold = 0.90;
     const distanceThreshold = 0.6; // Adjust as needed
-    const numDescriptorsToCollect = 100; // Number of descriptors to collect
+    const numDescriptorsToCollect = 10; // Number of descriptors to collect
     let collectedDescriptors = []; // Array to store descriptors
     let isCollecting = false; // Flag to indicate if collecting is in progress
     let intervalId; // Variable to store the interval ID

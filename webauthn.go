@@ -145,6 +145,7 @@ func (a *auth) OnMount(ctx app.Context) {
 	a.sh = sh
 
 	// a.deleteUsers()
+	// return
 
 	var err error
 	wconfig := &webauthn.Config{
