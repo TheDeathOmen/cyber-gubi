@@ -140,7 +140,7 @@ iframe {
   display: flex;
   justify-content: space-evenly;
   /* padding-bottom: 25px; */
-  padding-top: 25px
+  padding-top: 50px;
 }
 
 .card-item {
@@ -197,7 +197,8 @@ iframe {
 .lower-row {
   display: flex;
   justify-content: space-evenly;
-  margin-bottom: 20px;
+  padding: 25px;
+  margin-bottom: 25px;
 }
 
 .lower-row::before {
@@ -382,7 +383,6 @@ iframe {
 
 .menu-add-item {
   width: 100px!important;
-  margin-top: 25px;
 }
 
 .btn-register {
