@@ -61,7 +61,10 @@ func main() {
 		},
 		Scripts: []string{
 			"web/script.js",
-			"web/face-api.js",
+		},
+		RawHeaders: []string{
+			`
+			<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>`,
 		},
 	})
 
@@ -73,7 +76,10 @@ func main() {
 		},
 		Scripts: []string{
 			"web/script.js",
-			"web/face-api.js",
+		},
+		RawHeaders: []string{
+			`
+			<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>`,
 		},
 	})
 

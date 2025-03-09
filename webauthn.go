@@ -164,13 +164,13 @@ func (a *auth) OnMount(ctx app.Context) {
 	ctx.ObserveState("termsAccepted", &termsAccepted).
 		OnChange(func() {
 			fmt.Println("termsAccepted was changed at", time.Now())
-			a.doFetch(ctx, app.Event{})
+			a.doFetch(ctx)
 		})
 
 	if !termsAccepted {
 		app.Window().GetElementByID("main-menu").Call("click")
 	} else {
-		a.doFetch(ctx, app.Event{})
+		a.doFetch(ctx)
 	}
 }
 
@@ -242,7 +242,7 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 
 }
 
-func (a *auth) doFetch(ctx app.Context, e app.Event) {
+func (a *auth) doFetch(ctx app.Context) {
 	descriptors := [][]float32{}
 
 	users := a.getUsers()
@@ -577,8 +577,8 @@ func (a *auth) Render() app.UI {
 					app.Div().Class("lower-row").Body(
 						app.Div().Class("card-item").Body(
 							app.Div().Class("container").Body(
-								app.Video().ID("video").Width(200).Height(150).AutoPlay(true).Muted(true),
-								app.Canvas().ID("canvas").Width(200).Height(150),
+								app.Video().ID("video").Width(225).Height(225).AutoPlay(true).Muted(true),
+								app.Canvas().ID("canvas").Width(225).Height(225),
 							),
 						),
 					),

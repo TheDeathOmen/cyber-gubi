@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", (event) => {
 
 function startVideo() {
     // Set desired dimensions
-    const desiredWidth = 200;
-    const desiredHeight = 150;
+    const desiredWidth = 225;
+    const desiredHeight = 225;
     navigator.getUserMedia(
         { video: { width: desiredWidth, height: desiredHeight } },
         stream => {
@@ -51,6 +51,24 @@ async function initializeFaceRecognition(referenceDescriptors) {
     let intervalId; // Variable to store the interval ID
     let loginSuccessful = false; // ADDED: Flag to prevent multiple logins
 
+    // Liveness challenge variables
+    let challenge = null;
+    let challengeStartTime = 0;
+    const CHALLENGE_TIMEOUT = 30000; // Time to complete the challenge
+    let challengeSuccess = false;  // Track challenge success
+    // Constants for head nod
+    const HEAD_NOD_HISTORY_LENGTH = 5;  // Number of frames to track head position
+    const NOD_THRESHOLD = 8;  // Adjust this value based on testing
+    let headPositionHistory = []; // Array to store head positions
+    let nodDetected = false;    // Flag to indicate if nod is detected
+
+    // Function to generate a random challenge
+    function generateChallenge() {
+        const challenges = ["nod"];
+        const randomIndex = Math.floor(Math.random() * challenges.length);
+        return challenges[randomIndex];
+    }
+
     if (!(video instanceof HTMLVideoElement)) {
         console.error("Error: 'video' is NOT an HTMLVideoElement.", video);
         alert("Critical Error:  Video element is not valid. See console.");  // Make it obvious
@@ -76,12 +94,17 @@ async function initializeFaceRecognition(referenceDescriptors) {
     }
 
     // Load face-api.js models
-    Promise.all([
+    await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri('/web/models'),
         faceapi.nets.faceLandmark68Net.loadFromUri('/web/models'),
         faceapi.nets.faceRecognitionNet.loadFromUri('/web/models'),
         faceapi.nets.faceExpressionNet.loadFromUri('/web/models')
     ]);
+
+    // Instead of global 'tf', use:
+    const tf = faceapi.tf;
+    // Load anti-spoofing model
+    const spoofModel = await tf.loadGraphModel('/web/models/anti-spoofing.json');
 
     // Function to calculate Euclidean distance
     function calculateDistance(descriptor1, descriptor2) {
@@ -98,7 +121,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
     faceapi.matchDimensions(canvas, displaySize);
 
     intervalId = setInterval(async () => {
-        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors().withFaceExpressions(); // Added face expressions
         const resizedDetections = faceapi.resizeResults(detections, displaySize);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -107,7 +130,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
             console.warn("Multiple faces detected. Waiting for a single face.");
             ctx.font = "20px Arial";
             ctx.fillStyle = "red";
-            ctx.fillText("Multiple faces detected. Please show only one face.", 10, 50);
+            // ctx.fillText("Multiple faces detected. Please show only one face.", 10, 50);
             return;
         }
 
@@ -115,19 +138,126 @@ async function initializeFaceRecognition(referenceDescriptors) {
             console.warn("No faces detected.");
             ctx.font = "20px Arial";
             ctx.fillStyle = "red";
-            ctx.fillText("No faces detected.", 10, 50);
+            // ctx.fillText("No faces detected.", 10, 50);
             return;
         }
 
         // Now we know resizedDetections.length === 1
         const detection = resizedDetections[0]; // Access the first (and only) element
-
         const box = detection.detection.box;
         const drawBox = new faceapi.draw.DrawBox(box, { label: 'Unknown' });
-        drawBox.draw(canvas);
+        // drawBox.draw(canvas);
+
+        const SPOOF_INPUT_SIZE = 128; // 128x128 pixels
+        const SPOOF_THRESHOLD = 0.8; // 80% confidence threshold
+
+        // Anti-spoofing processing
+        let isRealFace = false;
+        try {
+            // Extract face region
+            const regions = await faceapi.extractFaces(video, [detection.detection.box]);
+            if (regions && regions.length > 0) {
+                // Convert to tensor and preprocess
+                const tensor = faceapi.tf.browser.fromPixels(regions[0])
+                    .resizeBilinear([SPOOF_INPUT_SIZE, SPOOF_INPUT_SIZE])
+                    .toFloat()
+                    .div(255.0) // Normalize to [0,1]
+                    .expandDims(0);
+
+                // Run anti-spoofing model
+                const predictions = await spoofModel.predict(tensor);
+                const score = predictions.dataSync()[0]; // Assuming single output
+                tensor.dispose(); // Clean up memory
+
+                // Determine real vs spoof
+                isRealFace = score < SPOOF_THRESHOLD;
+                
+                // Draw anti-spoofing result
+                ctx.fillStyle = isRealFace ? "green" : "red";
+                ctx.font = "20px Montserrat sans-serif";
+                ctx.fillText(`Live: ${score.toFixed(2)}`, 10, 30);
+            }
+        } catch (error) {
+            console.error('Anti-spoofing error:', error);
+        }
+
+        // Modify your existing confidence check to include anti-spoofing
+        if (detection.detection.score > confidenceThreshold && isRealFace) {
+            // ... rest of your existing logic ...
+        } else {
+            // Show spoof warning
+            if (!isRealFace) {
+                ctx.fillStyle = "red";
+                ctx.font = "20px Montserrat sans-serif";
+                ctx.fillText("Potential spoof detected!", 10, 110);
+            }
+            // Prevent login/registration on spoof
+            return;
+        }
+
+        // Draw Challenge on Canvas
+        if (challenge) {
+            ctx.font = "24px Montserrat sans-serif";
+            ctx.fillStyle = "cyan";
+            ctx.fillText(`Please ${challenge}`, 10, 80);
+        }
+
+        // Check for challenge timeout
+        if (challenge && (Date.now() - challengeStartTime > CHALLENGE_TIMEOUT)) {
+            console.warn("Challenge failed: timeout. Potential spoof!");
+            ctx.font = "20px Montserrat sans-serif";
+            ctx.fillStyle = "red";
+            ctx.fillText("Liveness check failed: timeout!", 10, 110);
+            challenge = null; // Reset challenge
+            challengeSuccess = false; // Reset challenge success
+        }
+
+        // Generate a new challenge if not already active
+        if (!challenge) {
+            challenge = generateChallenge();
+            challengeStartTime = Date.now();
+            challengeSuccess = false; // Reset challenge success flag
+            nodDetected = false; // Reset nod detection flag
+        }
+
+        // Challenge Success Detection
+        const landmarks = detection.landmarks;
+
+        // Challenge Success Detection - Head Nod
+        if (challenge === "nod") {
+            const currentNose = detection.landmarks.getNose()[0]; // Get the tip of the nose
+            headPositionHistory.push({ x: currentNose.x, y: currentNose.y });
+
+            if (headPositionHistory.length > HEAD_NOD_HISTORY_LENGTH) {
+                headPositionHistory.shift(); // Remove the oldest entry
+            }
+
+            if (headPositionHistory.length === HEAD_NOD_HISTORY_LENGTH) {
+                // Calculate vertical movement (nod)
+                let yDiffSum = 0;
+                for (let i = 1; i < HEAD_NOD_HISTORY_LENGTH; i++) {
+                    yDiffSum += (headPositionHistory[i].y - headPositionHistory[i - 1].y); // Only Y-axis
+                }
+                const totalVerticalMovement = yDiffSum;
+
+                if (Math.abs(totalVerticalMovement) > NOD_THRESHOLD) {
+                    console.log("Head nod detected!");
+                    nodDetected = true; // Nod detected
+                    challengeSuccess = true; // Set challenge success
+                }
+            }
+
+            if (nodDetected) {
+                console.log("Nod Liveness challenge passed!");
+                challengeSuccess = true; // Set challenge success flag
+                challenge = null; // Reset challenge
+                nodDetected = false; // Reset nod
+                headPositionHistory = []; // Reset history
+            }
+        }
 
         if (detection.detection.score > confidenceThreshold) { // Check confidence
-            if (referenceDescriptors.length > 0 && !loginSuccessful) {
+            if (referenceDescriptors.length > 0 && !loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
                 // USE A FOR...OF LOOP
                 for (const refDescriptor of referenceDescriptors) {
                     const distance = calculateDistance(refDescriptor, detection.descriptor);
@@ -140,7 +270,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
                         loginSuccessful = true; // ADDED: Set loginSuccessful
 
                         drawBox.options.label = 'Matched face';
-                        drawBox.draw(canvas);
+                        // drawBox.draw(canvas);
 
                         // Dispatch login event with the matched reference descriptor
                         const loginEvent = new CustomEvent('click', {
@@ -160,15 +290,15 @@ async function initializeFaceRecognition(referenceDescriptors) {
 
             // New face detected
             drawBox.options.label = 'New Face - Processing...';
-            drawBox.draw(canvas);
+            // drawBox.draw(canvas);
 
-            if (!isCollecting && !loginSuccessful) {
+            if (!isCollecting && !loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
                 isCollecting = true;
                 collectedDescriptors = []; // Reset the array
                 console.log("Collecting new descriptors...");
             }
 
-            if (isCollecting && collectedDescriptors.length < numDescriptorsToCollect) {
+            if (isCollecting && collectedDescriptors.length < numDescriptorsToCollect && challengeSuccess) { // ADDED challengeSuccess check
                 collectedDescriptors.push(detection.descriptor);
                 if (collectedDescriptors.length === numDescriptorsToCollect) {
                     // Collection complete
@@ -199,7 +329,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
             }
         } else {
             drawBox.options.label = `Confidence: ${detection.detection.score.toFixed(2)}`;
-            drawBox.draw(canvas);
+            // drawBox.draw(canvas);
         }
 
     }, 100);
@@ -235,3 +365,6 @@ async function initializeFaceRecognition(referenceDescriptors) {
         return averageDescriptor;
     }
 }
+
+
+

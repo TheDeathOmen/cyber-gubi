@@ -201,6 +201,10 @@ iframe {
   margin-bottom: 25px;
 }
 
+.card-auth > .lower-row {
+  margin-bottom: 50px;
+}
+
 .lower-row::before {
     content: '';
     display: block;
@@ -329,14 +333,9 @@ iframe {
   align-items: center;
 }
 
-/* .drawer-auth {
-  height: 300px;
+.drawer-auth {
+  height: 175px;
 }
-
-.drawer-pay {
-  height: 200px;
-} */
-
 
 .drawer span {
   display: inline-block;
