@@ -115,7 +115,7 @@ make build
 
 ## TODO
 
-- [ ] Add Presentation Attack Detection model to prevent malicious attempts to abuse facial recognition
+- [x] Add Presentation Attack Detection model to prevent malicious attempts to abuse facial recognition
 - [ ] Introduce registration for businesses via waiting list
 - [ ] Port go-ipfs-api orbit-db integration to kubo/rpc
 

@@ -24,10 +24,12 @@ const dbUser = "user"
 // embedding app.Compo into a struct.
 type auth struct {
 	app.Compo
-	sh       *shell.Shell
-	webAuthn *webauthn.WebAuthn
-	user     *User
-	users    []*User
+	sh                     *shell.Shell
+	webAuthn               *webauthn.WebAuthn
+	user                   *User
+	users                  []*User
+	entity                 string
+	notificationPermission app.NotificationPermission
 }
 
 // Credential represents the structure for credential information.
@@ -141,6 +143,11 @@ func (u *User) UpdateCredential(credential webauthn.Credential) {
 }
 
 func (a *auth) OnMount(ctx app.Context) {
+	a.notificationPermission = ctx.Notifications().Permission()
+	if a.notificationPermission == "default" {
+		a.notificationPermission = ctx.Notifications().RequestPermission()
+	}
+
 	sh := shell.NewShell("localhost:5001")
 	a.sh = sh
 
@@ -155,7 +162,10 @@ func (a *auth) OnMount(ctx app.Context) {
 	}
 
 	if a.webAuthn, err = webauthn.New(wconfig); err != nil {
-		app.Window().Get("alert").Invoke("webauthn instantiate error: ", err.Error())
+		ctx.Notifications().New(app.Notification{
+			Title: "Webauthn instantiate error",
+			Body:  err.Error(),
+		})
 		log.Fatal(err)
 	}
 
@@ -167,7 +177,15 @@ func (a *auth) OnMount(ctx app.Context) {
 			a.doFetch(ctx)
 		})
 
-	if !termsAccepted {
+	ctx.ObserveState("entity", &a.entity).
+		OnChange(func() {
+			fmt.Println("entity was changed at", time.Now())
+		})
+
+	if termsAccepted && a.entity == "" {
+		ctx.DelState("termsAccepted")
+		ctx.Reload()
+	} else if !termsAccepted {
 		app.Window().GetElementByID("main-menu").Call("click")
 	} else {
 		a.doFetch(ctx)
@@ -455,7 +473,10 @@ func (a *auth) beginRegistration(ctx app.Context, descriptorJSON string) {
 			ctx.SetState("userID", userID)
 			a.beginLogin(ctx, credentialID)
 		} else {
-			app.Window().Get("alert").Invoke("No credential returned.")
+			ctx.Notifications().New(app.Notification{
+				Title: "Registration error",
+				Body:  "No credential returned.",
+			})
 		}
 		return nil
 	})).Call("catch", app.FuncOf(func(this app.Value, p []app.Value) interface{} {
@@ -472,9 +493,15 @@ func (a *auth) beginRegistration(ctx app.Context, descriptorJSON string) {
 			}
 
 			// Notify user through UI instead of terminating application
-			app.Window().Get("alert").Invoke("Credential creation failed: " + errorMessage)
+			ctx.Notifications().New(app.Notification{
+				Title: "Registration error",
+				Body:  "Credential creation failed: " + errorMessage,
+			})
 		} else {
-			app.Window().Get("alert").Invoke("Unknown error occurred.")
+			ctx.Notifications().New(app.Notification{
+				Title: "Registration error",
+				Body:  "Unknown error occurred.",
+			})
 		}
 
 		return nil
@@ -521,12 +548,18 @@ func (a *auth) beginLogin(ctx app.Context, credentialID string) {
 	// Step 3: Handle the promise response
 	promise.Call("then", app.FuncOf(func(this app.Value, args []app.Value) interface{} {
 		if len(args) > 0 {
-			app.Window().Get("alert").Invoke("login successful!")
+			ctx.Notifications().New(app.Notification{
+				Title: "Success",
+				Body:  "Login successful!",
+			})
 			ctx.SetState("loggedIn", true)
 			// redirect to wallet
 			ctx.Navigate("/wallet")
 		} else {
-			app.Window().Get("alert").Invoke("beginLogin error: ", "No credential returned")
+			ctx.Notifications().New(app.Notification{
+				Title: "Login error",
+				Body:  "No credential returned.",
+			})
 			log.Fatal("No credential returned")
 		}
 		return nil
@@ -544,9 +577,15 @@ func (a *auth) beginLogin(ctx app.Context, credentialID string) {
 			}
 
 			// Notify user through UI instead of terminating application
-			app.Window().Get("alert").Invoke("Credential fetching failed: " + errorMessage)
+			ctx.Notifications().New(app.Notification{
+				Title: "Login error",
+				Body:  "Credential fetching failed: " + errorMessage,
+			})
 		} else {
-			app.Window().Get("alert").Invoke("Unknown error occurred.")
+			ctx.Notifications().New(app.Notification{
+				Title: "Login error",
+				Body:  "Unknown error occurred.",
+			})
 		}
 
 		return nil
@@ -579,6 +618,11 @@ func (a *auth) Render() app.UI {
 							app.Div().Class("container").Body(
 								app.Video().ID("video").Width(225).Height(225).AutoPlay(true).Muted(true),
 								app.Canvas().ID("canvas").Width(225).Height(225),
+							),
+							app.Div().Class("container").Body(
+								app.If(a.entity == "business", func() app.UI {
+									return app.Input().ID("vat-number").Type("text").Placeholder("VAT Number").Required(true)
+								}),
 							),
 						),
 					),

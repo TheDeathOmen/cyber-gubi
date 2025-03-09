@@ -287,7 +287,10 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 		p.userBalance.Balance = p.userBalance.Balance - totalCost
 		ctx.Update()
 
-		app.Window().Get("alert").Invoke("payment successful!")
+		ctx.Notifications().New(app.Notification{
+			Title: "Success",
+			Body:  "Payment successful!",
+		})
 	}
 }
 

@@ -198,12 +198,12 @@ iframe {
   display: flex;
   justify-content: space-evenly;
   padding: 25px;
-  margin-bottom: 25px;
+  /* margin-bottom: 25px; */
 }
 
-.card-auth > .lower-row {
+/* .card-auth > .lower-row {
   margin-bottom: 50px;
-}
+} */
 
 .lower-row::before {
     content: '';
@@ -440,7 +440,15 @@ iframe {
 
 #canvas {
   position: absolute;
-  left: 19%;
+  left: 15%;
+}
+
+input {
+  padding: 10px;
+  margin: 10px;
+  border: 1px solid lightseagreen;
+  border-radius: 20px;
+  font-family: Montserrat, sans-serif;
 }
 
 #pay-form {
@@ -458,14 +466,6 @@ iframe {
     padding: 10px;
     border: 1px solid lightseagreen;
     border-radius: 20px;
-  }
-
-  input {
-    padding: 10px;
-    margin: 10px;
-    border: 1px solid lightseagreen;
-    border-radius: 20px;
-    font-family: Montserrat, sans-serif;
   }
 }
 
@@ -524,6 +524,7 @@ body {
   max-width: 1050px;
   width: 90%;
   margin: auto;
+  padding-bottom: 20px;
 }
 
 nav {
