@@ -59,7 +59,7 @@ git clone https://github.com/stateless-minds/kubo.git
 ```{
   "API": {
     "HTTPHeaders": {
-      "Access-Control-Allow-Origin": ["webui://-", "http://localhost:3000", "http://k51qzi5uqu5dgw8gbjzw16d1q2rmtkip85yklwk7aknkoc1fkf4qtaxb90ltc7.ipns.localhost:8080", "http://127.0.0.1:5001", "https://webui.ipfs.io"],
+      "Access-Control-Allow-Origin": ["webui://-", "http://localhost:3000", "http://k51qzi5uqu5djkqrrcswqzxsdg3r9fxtzatjac00a2txm7woss7s78s0qihxgr.ipns.localhost:8080", "http://127.0.0.1:5001", "https://webui.ipfs.io"],
       "Access-Control-Allow-Credentials": ["true"],
       "Access-Control-Allow-Methods": ["PUT", "POST"]
     }
@@ -72,7 +72,7 @@ export ENC_PASSWORD=your_password_here
 make build
 ./cmd/ipfs/ipfs daemon --enable-pubsub-experiment
 ```
-7.  Navigate to <a href="https://ipfs.io/ipns/k51qzi5uqu5dgw8gbjzw16d1q2rmtkip85yklwk7aknkoc1fkf4qtaxb90ltc7">Cyber Gubi</a>
+7.  Navigate to <a href="https://ipfs.io/ipns/k51qzi5uqu5djkqrrcswqzxsdg3r9fxtzatjac00a2txm7woss7s78s0qihxgr">Cyber Gubi</a>
 8.  Pin it to your local node so that you become a permanent host of it while you have IPFS daemon running
 ![SetPinning](./assets/pin.png)
 ![PinToLocalNode](./assets/pin-to-local-node.png)
