@@ -23,6 +23,7 @@ type wallet struct {
 	app.Compo
 	sh           *shell.Shell
 	loggedIn     bool
+	isBusiness   bool
 	userID       string
 	userBalance  UserBalance
 	income       Income
@@ -52,6 +53,10 @@ func (w *wallet) OnMount(ctx app.Context) {
 	}
 
 	ctx.GetState("userID", &w.userID)
+
+	ctx.GetState("isBusiness", &w.isBusiness)
+
+	log.Println("w.isBusiness", w.isBusiness)
 
 	// w.updateIncome()
 	// w.deleteIncome()
@@ -147,24 +152,22 @@ func (w *wallet) getBalance(ctx app.Context) {
 			log.Fatal(err)
 		}
 
-		// days := daysRemainingInMonth(time.Now())
+		userBalances := []UserBalance{}
 
 		if len(b) == 0 {
 			ctx.Dispatch(func(ctx app.Context) {
 				w.userBalance = UserBalance{}
-				// if there are 3 or less days remaining till the end of the month including today receive income
-				// if days >= 3 {
-				w.getIncome(ctx)
-				// }
+				ctx.SetState("balance", w.userBalance)
+				if !w.isBusiness {
+					w.getIncome(ctx)
+				}
 			})
 			return
-		}
-
-		userBalances := []UserBalance{}
-
-		err = json.Unmarshal(b, &userBalances) // Unmarshal the byte slice directly
-		if err != nil {
-			log.Fatal(err)
+		} else {
+			err = json.Unmarshal(b, &userBalances) // Unmarshal the byte slice directly
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		ctx.Dispatch(func(ctx app.Context) {
@@ -172,11 +175,8 @@ func (w *wallet) getBalance(ctx app.Context) {
 			ctx.SetState("balance", w.userBalance)
 
 			// check if recurring income was received for this month
-			if w.userBalance.LastReceived != strconv.Itoa(time.Now().Year())+"/"+strconv.Itoa(int(time.Now().Month())) {
-				// if there are 3 or less days remaining till the end of the month including today receive income
-				// if days >= 3 {
+			if !w.isBusiness && w.userBalance.LastReceived != strconv.Itoa(time.Now().Year())+"/"+strconv.Itoa(int(time.Now().Month())) {
 				w.getIncome(ctx)
-				// }
 			} else {
 				w.getTransactions(ctx)
 			}
@@ -293,7 +293,7 @@ func (w *wallet) Render() app.UI {
 			app.Div().Class("header").Body(
 				newNav(),
 				app.Div().Class("header-summary").Body(
-					app.Span().ID("logo").Text("cyber-gubi"),
+					app.Span().Class("logo").Text("cyber-gubi"),
 					app.Div().Class("summary-text").Body(
 						app.Span().Text("Balance"),
 					),

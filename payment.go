@@ -302,7 +302,7 @@ func (p *payment) Render() app.UI {
 			app.Div().Class("header").Body(
 				newNav(),
 				app.Div().Class("header-summary").Body(
-					app.Span().ID("logo").Text("cyber-gubi"),
+					app.Span().Class("logo").Text("cyber-gubi"),
 					app.Div().Class("summary-text").Body(
 						app.Span().Text("Balance"),
 					),

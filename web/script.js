@@ -58,7 +58,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
     let challengeSuccess = false;  // Track challenge success
     // Constants for head nod
     const HEAD_NOD_HISTORY_LENGTH = 5;  // Number of frames to track head position
-    const NOD_THRESHOLD = 8;  // Adjust this value based on testing
+    const NOD_THRESHOLD = 3;  // Adjust this value based on testing
     let headPositionHistory = []; // Array to store head positions
     let nodDetected = false;    // Flag to indicate if nod is detected
 
@@ -252,9 +252,9 @@ async function initializeFaceRecognition(referenceDescriptors) {
             if (nodDetected) {
                 console.log("Nod Liveness challenge passed!");
                 challengeSuccess = true; // Set challenge success flag
-                challenge = null; // Reset challenge
-                nodDetected = false; // Reset nod
-                headPositionHistory = []; // Reset history
+                // challenge = null; // Reset challenge
+                // nodDetected = false; // Reset nod
+                // headPositionHistory = []; // Reset history
             }
         }
 

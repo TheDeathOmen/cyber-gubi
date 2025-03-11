@@ -13,8 +13,8 @@ type nav struct {
 	sh            *shell.Shell
 	loggedIn      bool
 	termsAccepted bool
-	isIndividual  bool
 	isBusiness    bool
+	vat           string
 	entity        string
 	userID        string
 }
@@ -27,17 +27,14 @@ func (n *nav) OnMount(ctx app.Context) {
 	ctx.GetState("loggedIn", &n.loggedIn)
 	if n.loggedIn {
 		ctx.GetState("userID", &n.userID)
+		ctx.GetState("isBusiness", &n.isBusiness)
 		sh := shell.NewShell("localhost:5001")
 		n.sh = sh
 	}
 
-	ctx.GetState("termsAccepted", &n.termsAccepted)
-	ctx.GetState("entity", &n.entity)
-	if n.entity == "individual" {
-		n.isIndividual = true
-	} else if n.entity == "business" {
-		n.isBusiness = true
-	}
+	ctx.ObserveState("termsAccepted", &n.termsAccepted)
+	ctx.ObserveState("entity", &n.entity)
+	ctx.ObserveState("vat", &n.vat)
 }
 
 func (n *nav) doOverlay(ctx app.Context, e app.Event) {
@@ -46,18 +43,13 @@ func (n *nav) doOverlay(ctx app.Context, e app.Event) {
 
 func (n *nav) acceptTermsIndividual(ctx app.Context, e app.Event) {
 	e.PreventDefault()
-	n.termsAccepted = true
-	ctx.SetState("termsAccepted", true).Persist()
-	ctx.SetState("entity", "individual")
+	ctx.SetState("termsAccepted", true)
 	app.Window().GetElementByID("main-menu").Call("click")
 }
 
 func (n *nav) acceptTermsBusiness(ctx app.Context, e app.Event) {
 	e.PreventDefault()
-	n.termsAccepted = true
-	ctx.SetState("termsAccepted", true).Persist()
-	ctx.SetState("entity", "business")
-	app.Window().GetElementByID("main-menu").Call("click")
+	ctx.SetState("termsAccepted", true)
 }
 
 func (n *nav) deleteAccount(ctx app.Context, e app.Event) {
@@ -71,14 +63,21 @@ func (n *nav) deleteAccount(ctx app.Context, e app.Event) {
 
 func (n *nav) registerIndividual(ctx app.Context, e app.Event) {
 	e.PreventDefault()
-	ctx.SetState("entity", "individual").Persist()
-	n.isIndividual = true
+	ctx.SetState("entity", "individual")
 }
 
 func (n *nav) registerBusiness(ctx app.Context, e app.Event) {
 	e.PreventDefault()
-	ctx.SetState("entity", "business").Persist()
-	n.isBusiness = true
+	ctx.SetState("entity", "business")
+}
+
+func (n *nav) submitVAT(ctx app.Context, e app.Event) {
+	valid := app.Window().GetElementByID("vat-number").Call("reportValidity").Bool()
+	if valid {
+		vat := app.Window().GetElementByID("vat-number").Get("value").String()
+		ctx.SetState("vat", vat)
+		app.Window().GetElementByID("main-menu").Call("click")
+	}
 }
 
 func (n *nav) deleteUser() {
@@ -100,16 +99,35 @@ func (n *nav) Render() app.UI {
 	return app.Nav().Body(
 		app.Div().Class("navbar").Body(
 			app.Div().Class("container nav-container").Body(
-				app.Input().ID("main-menu").Class("checkbox").Type("checkbox").Name("Main Menu").OnClick(n.doOverlay),
-				app.Div().Class("hamburger-lines").Body(
-					app.Span().Class("line line1"),
-					app.Span().Class("line line2"),
-					app.Span().Class("line line3"),
-				),
+				app.If((n.entity == "individual" && n.termsAccepted) || (n.entity == "business" && n.termsAccepted && len(n.vat) > 0) || (n.loggedIn && n.isBusiness), func() app.UI {
+					return app.Input().ID("main-menu").Class("checkbox").Type("checkbox").Name("Main Menu").OnClick(n.doOverlay)
+				}).Else(func() app.UI {
+					return app.Input().ID("main-menu").Class("checkbox").Type("checkbox").Name("Main Menu").OnClick(n.doOverlay).Style("pointer-events", "none")
+				}),
+				app.If((n.entity == "individual" && n.termsAccepted) || (n.entity == "business" && n.termsAccepted && len(n.vat) > 0) || (n.loggedIn && n.isBusiness), func() app.UI {
+					return app.Div().Class("hamburger-lines").Body(
+						app.Span().Class("line line1"),
+						app.Span().Class("line line2"),
+						app.Span().Class("line line3"),
+					)
+				}).Else(func() app.UI {
+					return app.Div().Class("hamburger-lines").Body(
+						app.Span().Class("line line1"),
+						app.Span().Class("line line2"),
+						app.Span().Class("line line3"),
+					).Style("display", "none")
+				}),
+
 				app.If(!n.loggedIn, func() app.UI {
 					return app.If(!n.termsAccepted, func() app.UI {
-						return app.If(n.isIndividual, func() app.UI {
+						return app.If(n.entity == "individual", func() app.UI {
 							return app.Div().Class("menu-items").Body(
+								app.Div().Class("header-summary").Body(
+									app.Span().Class("logo").Text("cyber-gubi"),
+									app.Div().Class("summary-text").Body(
+										app.Span().Text("Menu"),
+									),
+								),
 								app.Li().Body(
 									app.A().Href("/terms").Target("_blank").Text("Terms of Use"),
 								),
@@ -123,8 +141,14 @@ func (n *nav) Render() app.UI {
 									app.Button().ID("accept-terms").Class("submit").Type("submit").Text("Accept Terms").OnClick(n.acceptTermsIndividual),
 								),
 							)
-						}).ElseIf(n.isBusiness, func() app.UI {
+						}).ElseIf(n.entity == "business", func() app.UI {
 							return app.Div().Class("menu-items").Body(
+								app.Div().Class("header-summary").Body(
+									app.Span().Class("logo").Text("cyber-gubi"),
+									app.Div().Class("summary-text").Body(
+										app.Span().Text("Menu"),
+									),
+								),
 								app.Li().Body(
 									app.A().Href("/terms-business").Target("_blank").Text("Terms of Use"),
 								),
@@ -140,17 +164,34 @@ func (n *nav) Render() app.UI {
 							)
 						}).Else(func() app.UI {
 							return app.Div().Class("menu-items").Body(
+								app.Div().Class("header-summary").Body(
+									app.Span().Class("logo").Text("cyber-gubi"),
+									app.Div().Class("summary-text").Body(
+										app.Span().Text("Menu"),
+									),
+								),
 								app.Li().Body(
 									app.A().Text("For Individuals").OnClick(n.registerIndividual),
 								),
 								app.Li().Body(
-									app.A().Text("For Businesses").OnClick(n.registerBusiness),
+									app.Div().Class("tooltip").DataSet("direction", "bottom").Body(
+										app.Div().Class("tooltip__initiator").Body(
+											app.A().Text("For Businesses").OnClick(n.registerBusiness),
+										),
+										app.Div().Class("tooltip__item").Text("Coming soon! Join the waitlist"),
+									),
 								),
 							)
 						})
 					}).Else(func() app.UI {
-						return app.If(n.isIndividual, func() app.UI {
+						return app.If(n.entity == "individual", func() app.UI {
 							return app.Div().Class("menu-items").Body(
+								app.Div().Class("header-summary").Body(
+									app.Span().Class("logo").Text("cyber-gubi"),
+									app.Div().Class("summary-text").Body(
+										app.Span().Text("Menu"),
+									),
+								),
 								app.Li().Body(
 									app.A().Href("/terms").Target("_blank").Text("Terms of Use"),
 								),
@@ -161,32 +202,70 @@ func (n *nav) Render() app.UI {
 									app.A().Href("/cookie").Target("_blank").Text("Cookie"),
 								),
 							)
-						}).ElseIf(n.isBusiness, func() app.UI {
-							return app.Div().Class("menu-items").Body(
-								app.Li().Body(
-									app.A().Href("/terms-business").Target("_blank").Text("Terms of Use"),
-								),
-								app.Li().Body(
-									app.A().Href("/privacy-business").Target("_blank").Text("Privacy"),
-								),
-								app.Li().Body(
-									app.A().Href("/cookie-business").Target("_blank").Text("Cookie"),
-								),
-							)
+						}).ElseIf(n.entity == "business", func() app.UI {
+							return app.If(len(n.vat) == 0, func() app.UI {
+								return app.Div().Class("menu-items").Body(
+									app.Div().Class("header-summary").Body(
+										app.Span().Class("logo").Text("cyber-gubi"),
+										app.Div().Class("summary-text").Body(
+											app.Span().Text("Menu"),
+										),
+									),
+									app.Label().Class("menu-label").For("vat-number").Text("VAT Number:"),
+									app.Input().ID("vat-number").Type("text").Placeholder("Enter VAT Number").Required(true),
+									app.Div().Class("menu-btn").Body(
+										app.Button().ID("submit-vat").Class("submit").Text("Submit VAT").OnClick(n.submitVAT)),
+								)
+							}).Else(func() app.UI {
+								return app.Div().Class("menu-items").Body(
+									app.Div().Class("header-summary").Body(
+										app.Span().Class("logo").Text("cyber-gubi"),
+										app.Div().Class("summary-text").Body(
+											app.Span().Text("Menu"),
+										),
+									),
+									app.Li().Body(
+										app.A().Href("/terms-business").Target("_blank").Text("Terms of Use"),
+									),
+									app.Li().Body(
+										app.A().Href("/privacy-business").Target("_blank").Text("Privacy"),
+									),
+									app.Li().Body(
+										app.A().Href("/cookie-business").Target("_blank").Text("Cookie"),
+									),
+								)
+							})
 						}).Else(func() app.UI {
 							return app.Div().Class("menu-items").Body(
+								app.Div().Class("header-summary").Body(
+									app.Span().Class("logo").Text("cyber-gubi"),
+									app.Div().Class("summary-text").Body(
+										app.Span().Text("Menu"),
+									),
+								),
 								app.Li().Body(
 									app.A().Text("For Individuals").OnClick(n.registerIndividual),
 								),
 								app.Li().Body(
-									app.A().Text("For Businesses").OnClick(n.registerBusiness),
+									app.Div().Class("tooltip").DataSet("direction", "bottom").Body(
+										app.Div().Class("tooltip__initiator").Body(
+											app.A().Text("For Businesses").OnClick(n.registerBusiness),
+										),
+										app.Div().Class("tooltip__item").Text("Coming soon! Join the waitlist"),
+									),
 								),
 							)
 						})
 					})
 				}).Else(func() app.UI {
-					return app.If(n.isIndividual, func() app.UI {
+					return app.If(n.entity == "individual", func() app.UI {
 						return app.Div().Class("menu-items").Body(
+							app.Div().Class("header-summary").Body(
+								app.Span().Class("logo").Text("cyber-gubi"),
+								app.Div().Class("summary-text").Body(
+									app.Span().Text("Menu"),
+								),
+							),
 							app.Li().Body(
 								app.A().Href("/wallet").Text("Wallet"),
 							),
@@ -208,6 +287,12 @@ func (n *nav) Render() app.UI {
 						)
 					}).Else(func() app.UI {
 						return app.Div().Class("menu-items").Body(
+							app.Div().Class("header-summary").Body(
+								app.Span().Class("logo").Text("cyber-gubi"),
+								app.Div().Class("summary-text").Body(
+									app.Span().Text("Menu"),
+								),
+							),
 							app.Li().Body(
 								app.A().Href("/wallet").Text("Wallet"),
 							),

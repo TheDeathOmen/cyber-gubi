@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	mathRand "math/rand"
 	"strconv"
@@ -26,10 +25,13 @@ type auth struct {
 	app.Compo
 	sh                     *shell.Shell
 	webAuthn               *webauthn.WebAuthn
+	descriptorJSON         string
 	user                   *User
 	users                  []*User
 	entity                 string
+	termsAccepted          bool
 	notificationPermission app.NotificationPermission
+	vat                    string
 }
 
 // Credential represents the structure for credential information.
@@ -53,6 +55,7 @@ type User struct {
 	DisplayName   string                `mapstructure:"display_name" json:"display_name" validate:"uuid_rfc4122"`     // Display name for the user
 	CredentialIDs []webauthn.Credential `mapstructure:"credential_ids" json:"credential_ids" validate:"uuid_rfc4122"` // List of credential IDs associated with the user
 	Descriptor    []float32             `mapstructure:"descriptor" json:"descriptor" validate:"uuid_rfc4122"`         // Face descriptor for the user
+	VAT           string                `mapstructure:"vat" json:"vat" validate:"uuid_rfc4122"`                       // VAT when company
 }
 
 // Define your own struct that matches the CredentialCreation structure
@@ -169,27 +172,33 @@ func (a *auth) OnMount(ctx app.Context) {
 		log.Fatal(err)
 	}
 
-	var termsAccepted bool
-
-	ctx.ObserveState("termsAccepted", &termsAccepted).
-		OnChange(func() {
-			fmt.Println("termsAccepted was changed at", time.Now())
-			a.doFetch(ctx)
-		})
+	a.fetchUsers(ctx)
 
 	ctx.ObserveState("entity", &a.entity).
 		OnChange(func() {
-			fmt.Println("entity was changed at", time.Now())
+			log.Println("a.entity: ", a.entity)
 		})
 
-	if termsAccepted && a.entity == "" {
-		ctx.DelState("termsAccepted")
-		ctx.Reload()
-	} else if !termsAccepted {
-		app.Window().GetElementByID("main-menu").Call("click")
-	} else {
-		a.doFetch(ctx)
-	}
+	ctx.ObserveState("termsAccepted", &a.termsAccepted).
+		OnChange(func() {
+			log.Println("a.termsAccepted: ", a.termsAccepted)
+			log.Println("a.termsAccepted.entity: ", a.entity)
+
+			if a.entity == "individual" {
+				a.beginRegistration(ctx)
+			}
+		})
+
+	ctx.ObserveState("vat", &a.vat).
+		OnChange(func() {
+			log.Println("a.vat: ", a.vat)
+			log.Println("a.vat.entity: ", a.entity)
+			log.Println("a.vat.termsAccepted: ", a.termsAccepted)
+
+			if a.entity == "business" && a.termsAccepted {
+				a.beginRegistration(ctx)
+			}
+		})
 }
 
 func (a *auth) getIncome(ctx app.Context) {
@@ -234,9 +243,8 @@ func NewUser() (*User, error) {
 }
 
 func (a *auth) doRegister(ctx app.Context, e app.Event) {
-	descriptorJSON := e.Get("detail").Get("descriptor").String()
-
-	a.beginRegistration(ctx, descriptorJSON) // pass ciphertext not hash
+	a.descriptorJSON = e.Get("detail").Get("descriptor").String()
+	app.Window().GetElementByID("main-menu").Call("click")
 }
 
 func (a *auth) doLogin(ctx app.Context, e app.Event) {
@@ -254,13 +262,16 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 
 		if string(desc) == descriptorJSON {
 			ctx.SetState("userID", string(user.ID))
+			if len(user.VAT) > 0 {
+				ctx.SetState("isBusiness", true)
+			}
 			a.beginLogin(ctx, string(user.CredentialIDs[0].ID))
 		}
 	}
 
 }
 
-func (a *auth) doFetch(ctx app.Context) {
+func (a *auth) fetchUsers(ctx app.Context) {
 	descriptors := [][]float32{}
 
 	users := a.getUsers()
@@ -287,10 +298,10 @@ func (a *auth) doFetch(ctx app.Context) {
 		}),
 	)
 
-	// days := daysRemainingInMonth(time.Now())
-	// if days >= 3 {
-	a.getIncome(ctx)
-	// }
+	days := daysRemainingInMonth(time.Now())
+	if days <= 3 {
+		a.getIncome(ctx)
+	}
 }
 
 func (a *auth) getUser(key, value string) User {
@@ -354,13 +365,14 @@ func (a *auth) deleteUsers() {
 	}
 }
 
-func (a *auth) createUser(ctx app.Context, userID, credentialID, descriptorJSON string) {
+func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 	ctx.Async(func() {
 		var descriptorBytes []float32
-		err := json.Unmarshal([]byte(descriptorJSON), &descriptorBytes)
+		err := json.Unmarshal([]byte(a.descriptorJSON), &descriptorBytes)
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		user := &User{
 			ID: protocol.URLEncodedBase64(userID),
 			CredentialIDs: []webauthn.Credential{
@@ -369,6 +381,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID, descriptorJSON 
 				},
 			},
 			Descriptor: descriptorBytes,
+			VAT:        a.vat,
 		}
 
 		userJSON, err := json.Marshal(user)
@@ -387,7 +400,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID, descriptorJSON 
 	})
 }
 
-func (a *auth) beginRegistration(ctx app.Context, descriptorJSON string) {
+func (a *auth) beginRegistration(ctx app.Context) {
 	// RelyingParty instance
 	relyingParty := RelyingParty{
 		Name: a.webAuthn.Config.RPDisplayName,
@@ -463,14 +476,11 @@ func (a *auth) beginRegistration(ctx app.Context, descriptorJSON string) {
 
 			// Get the credentialId
 			credentialID := cred.Get("id").String()
-			a.createUser(ctx, userID, credentialID, descriptorJSON)
-			var descriptorBytes []float32
-			err := json.Unmarshal([]byte(descriptorJSON), &descriptorBytes)
-			if err != nil {
-				log.Fatal(err)
-			}
-
+			a.createUser(ctx, userID, credentialID)
 			ctx.SetState("userID", userID)
+			if len(a.vat) > 0 {
+				ctx.SetState("isBusiness", true)
+			}
 			a.beginLogin(ctx, credentialID)
 		} else {
 			ctx.Notifications().New(app.Notification{
@@ -600,7 +610,7 @@ func (a *auth) Render() app.UI {
 			app.Div().Class("header").Body(
 				newNav(),
 				app.Div().Class("header-summary").Body(
-					app.Span().ID("logo").Text("cyber-gubi"),
+					app.Span().Class("logo").Text("cyber-gubi"),
 					app.Div().Class("summary-text").Body(
 						app.Span().Text("Authentication"),
 					),
@@ -618,11 +628,6 @@ func (a *auth) Render() app.UI {
 							app.Div().Class("container").Body(
 								app.Video().ID("video").Width(225).Height(225).AutoPlay(true).Muted(true),
 								app.Canvas().ID("canvas").Width(225).Height(225),
-							),
-							app.Div().Class("container").Body(
-								app.If(a.entity == "business", func() app.UI {
-									return app.Input().ID("vat-number").Type("text").Placeholder("VAT Number").Required(true)
-								}),
 							),
 						),
 					),
