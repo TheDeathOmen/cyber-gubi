@@ -90,6 +90,7 @@ make build
 + Economy changes from ownership model to usage model
 + Businesses simplify their business models, get predictable profits and reduce costs
 + People no longer need storage
++ Circular economy generates less waste
 
 ## Simplified
 + Businesses register on the platform in a waitlist
