@@ -91,6 +91,8 @@ make build
 + Businesses simplify their business models, get predictable profits and reduce costs
 + People no longer need storage
 + Circular economy generates less waste
++ Governments have regulator accounts where they can adjust settings such as tax
++ Tax is collected automatically by an open-source algorithm
 
 ## Simplified
 + Businesses register on the platform in a waitlist
@@ -100,6 +102,7 @@ make build
 + Users subscribe for a monthly fee and get access to stores
 + Businesses plan accordingly the budget for stocking
 + Businesses save on - pricing, marketing, cashiers, advertising, accounting
++ Governments collect more tax and invest in better services and infrastructure
 
 ## FAQ
 
@@ -119,6 +122,7 @@ make build
 - [x] Add Presentation Attack Detection model to prevent malicious attempts to abuse facial recognition
 - [ ] Introduce registration for businesses via waiting list
 - [ ] Port go-ipfs-api orbit-db integration to kubo/rpc
+- [ ] Final step - Introduce governments as regulators - they have an admin panel with settings, an open-source algorithm collects taxes automatically. Governments have no control over the system and can only collect if they have an account
 
 ## Acknowledgments
 

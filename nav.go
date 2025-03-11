@@ -273,6 +273,12 @@ func (n *nav) Render() app.UI {
 								app.A().Href("/payment").Text("Payment"),
 							),
 							app.Li().Body(
+								app.A().Href("/merchants").Text("Merchants"),
+							),
+							app.Li().Body(
+								app.A().Href("/subscriptions").Text("Subscriptions"),
+							),
+							app.Li().Body(
 								app.A().Href("/terms").Text("Terms of Use"),
 							),
 							app.Li().Body(
@@ -300,7 +306,7 @@ func (n *nav) Render() app.UI {
 								app.A().Href("/payment").Text("Payment"),
 							),
 							app.Li().Body(
-								app.A().Href("/clients").Text("Clients"),
+								app.A().Href("/create-plan").Text("Create Plan"),
 							),
 							app.Li().Body(
 								app.A().Href("/suppliers").Text("Suppliers"),

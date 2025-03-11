@@ -43,7 +43,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
     const canvas = document.getElementById("canvas");
     const registerButton = window.parent.document.getElementById('register-btn');
     const loginButton = window.parent.document.getElementById('login-btn');
-    const confidenceThreshold = 0.90;
+    const confidenceThreshold = 0.70;
     const distanceThreshold = 0.6; // Adjust as needed
     const numDescriptorsToCollect = 10; // Number of descriptors to collect
     let collectedDescriptors = []; // Array to store descriptors
@@ -55,7 +55,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
     let challenge = null;
     let challengeStartTime = 0;
     const CHALLENGE_TIMEOUT = 30000; // Time to complete the challenge
-    let challengeSuccess = false;  // Track challenge success
+    let challengeSuccess = true;  // Track challenge success
     // Constants for head nod
     const HEAD_NOD_HISTORY_LENGTH = 5;  // Number of frames to track head position
     const NOD_THRESHOLD = 3;  // Adjust this value based on testing
@@ -148,117 +148,104 @@ async function initializeFaceRecognition(referenceDescriptors) {
         const detection = resizedDetections[0]; // Access the first (and only) element
         const box = detection.detection.box;
         const drawBox = new faceapi.draw.DrawBox(box, { label: 'Unknown' });
-        // drawBox.draw(canvas);
+        drawBox.draw(canvas);
 
         const SPOOF_INPUT_SIZE = 128; // 128x128 pixels
         const SPOOF_THRESHOLD = 0.8; // 80% confidence threshold
 
         // Anti-spoofing processing
-        let isRealFace = false;
-        try {
-            // Extract face region
-            const regions = await faceapi.extractFaces(video, [detection.detection.box]);
-            if (regions && regions.length > 0) {
-                // Convert to tensor and preprocess
-                const tensor = faceapi.tf.browser.fromPixels(regions[0])
-                    .resizeBilinear([SPOOF_INPUT_SIZE, SPOOF_INPUT_SIZE])
-                    .toFloat()
-                    .div(255.0) // Normalize to [0,1]
-                    .expandDims(0);
+        // let isRealFace = false;
+        // try {
+        //     // Extract face region
+        //     const regions = await faceapi.extractFaces(video, [detection.detection.box]);
+        //     if (regions && regions.length > 0) {
+        //         // Convert to tensor and preprocess
+        //         const tensor = faceapi.tf.browser.fromPixels(regions[0])
+        //             .resizeBilinear([SPOOF_INPUT_SIZE, SPOOF_INPUT_SIZE])
+        //             .toFloat()
+        //             .div(255.0) // Normalize to [0,1]
+        //             .expandDims(0);
 
-                // Run anti-spoofing model
-                const predictions = await spoofModel.predict(tensor);
-                const score = predictions.dataSync()[0]; // Assuming single output
-                tensor.dispose(); // Clean up memory
+        //         // Run anti-spoofing model
+        //         const predictions = await spoofModel.predict(tensor);
+        //         const score = predictions.dataSync()[0]; // Assuming single output
+        //         tensor.dispose(); // Clean up memory
 
-                // Determine real vs spoof
-                isRealFace = score < SPOOF_THRESHOLD;
+        //         // Determine real vs spoof
+        //         isRealFace = score < SPOOF_THRESHOLD;
                 
-                // Draw anti-spoofing result
-                ctx.fillStyle = isRealFace ? "green" : "red";
-                ctx.font = "20px Montserrat sans-serif";
-                ctx.fillText(`Live: ${score.toFixed(2)}`, 10, 30);
-            }
-        } catch (error) {
-            console.error('Anti-spoofing error:', error);
-        }
+        //         // Draw anti-spoofing result
+        //         ctx.fillStyle = isRealFace ? "green" : "red";
+        //         ctx.font = "20px Montserrat sans-serif";
+        //         ctx.fillText(`Live: ${score.toFixed(2)}`, 10, 30);
+        //     }
+        // } catch (error) {
+        //     console.error('Anti-spoofing error:', error);
+        // }
 
-        // Modify your existing confidence check to include anti-spoofing
-        if (detection.detection.score > confidenceThreshold && isRealFace) {
-            // ... rest of your existing logic ...
-        } else {
-            // Show spoof warning
-            if (!isRealFace) {
-                ctx.fillStyle = "red";
-                ctx.font = "20px Montserrat sans-serif";
-                ctx.fillText("Potential spoof detected!", 10, 110);
-            }
-            // Prevent login/registration on spoof
-            return;
-        }
+        // // Draw Challenge on Canvas
+        // if (challenge) {
+        //     ctx.font = "24px Montserrat sans-serif";
+        //     ctx.fillStyle = "cyan";
+        //     ctx.fillText(`Please ${challenge}`, 10, 80);
+        // }
 
-        // Draw Challenge on Canvas
-        if (challenge) {
-            ctx.font = "24px Montserrat sans-serif";
-            ctx.fillStyle = "cyan";
-            ctx.fillText(`Please ${challenge}`, 10, 80);
-        }
+        // // Check for challenge timeout
+        // if (challenge && (Date.now() - challengeStartTime > CHALLENGE_TIMEOUT)) {
+        //     console.warn("Challenge failed: timeout. Potential spoof!");
+        //     ctx.font = "20px Montserrat sans-serif";
+        //     ctx.fillStyle = "red";
+        //     ctx.fillText("Liveness check failed: timeout!", 10, 110);
+        //     challenge = null; // Reset challenge
+        //     challengeSuccess = false; // Reset challenge success
+        // }
 
-        // Check for challenge timeout
-        if (challenge && (Date.now() - challengeStartTime > CHALLENGE_TIMEOUT)) {
-            console.warn("Challenge failed: timeout. Potential spoof!");
-            ctx.font = "20px Montserrat sans-serif";
-            ctx.fillStyle = "red";
-            ctx.fillText("Liveness check failed: timeout!", 10, 110);
-            challenge = null; // Reset challenge
-            challengeSuccess = false; // Reset challenge success
-        }
+        // // Generate a new challenge if not already active
+        // if (!challenge) {
+        //     challenge = generateChallenge();
+        //     challengeStartTime = Date.now();
+        //     challengeSuccess = false; // Reset challenge success flag
+        //     nodDetected = false; // Reset nod detection flag
+        // }
 
-        // Generate a new challenge if not already active
-        if (!challenge) {
-            challenge = generateChallenge();
-            challengeStartTime = Date.now();
-            challengeSuccess = false; // Reset challenge success flag
-            nodDetected = false; // Reset nod detection flag
-        }
+        // // Challenge Success Detection
+        // const landmarks = detection.landmarks;
 
-        // Challenge Success Detection
-        const landmarks = detection.landmarks;
+        // // Challenge Success Detection - Head Nod
+        // if (challenge === "nod") {
+        //     const currentNose = detection.landmarks.getNose()[0]; // Get the tip of the nose
+        //     headPositionHistory.push({ x: currentNose.x, y: currentNose.y });
 
-        // Challenge Success Detection - Head Nod
-        if (challenge === "nod") {
-            const currentNose = detection.landmarks.getNose()[0]; // Get the tip of the nose
-            headPositionHistory.push({ x: currentNose.x, y: currentNose.y });
+        //     if (headPositionHistory.length > HEAD_NOD_HISTORY_LENGTH) {
+        //         headPositionHistory.shift(); // Remove the oldest entry
+        //     }
 
-            if (headPositionHistory.length > HEAD_NOD_HISTORY_LENGTH) {
-                headPositionHistory.shift(); // Remove the oldest entry
-            }
+        //     if (headPositionHistory.length === HEAD_NOD_HISTORY_LENGTH) {
+        //         // Calculate vertical movement (nod)
+        //         let yDiffSum = 0;
+        //         for (let i = 1; i < HEAD_NOD_HISTORY_LENGTH; i++) {
+        //             yDiffSum += (headPositionHistory[i].y - headPositionHistory[i - 1].y); // Only Y-axis
+        //         }
+        //         const totalVerticalMovement = yDiffSum;
 
-            if (headPositionHistory.length === HEAD_NOD_HISTORY_LENGTH) {
-                // Calculate vertical movement (nod)
-                let yDiffSum = 0;
-                for (let i = 1; i < HEAD_NOD_HISTORY_LENGTH; i++) {
-                    yDiffSum += (headPositionHistory[i].y - headPositionHistory[i - 1].y); // Only Y-axis
-                }
-                const totalVerticalMovement = yDiffSum;
+        //         if (Math.abs(totalVerticalMovement) > NOD_THRESHOLD) {
+        //             console.log("Head nod detected!");
+        //             nodDetected = true; // Nod detected
+        //             challengeSuccess = true; // Set challenge success
+        //         }
+        //     }
 
-                if (Math.abs(totalVerticalMovement) > NOD_THRESHOLD) {
-                    console.log("Head nod detected!");
-                    nodDetected = true; // Nod detected
-                    challengeSuccess = true; // Set challenge success
-                }
-            }
+        //     if (nodDetected) {
+        //         console.log("Nod Liveness challenge passed!");
+        //         challengeSuccess = true; // Set challenge success flag
+        //         // challenge = null; // Reset challenge
+        //         // nodDetected = false; // Reset nod
+        //         // headPositionHistory = []; // Reset history
+        //     }
+        // }
 
-            if (nodDetected) {
-                console.log("Nod Liveness challenge passed!");
-                challengeSuccess = true; // Set challenge success flag
-                // challenge = null; // Reset challenge
-                // nodDetected = false; // Reset nod
-                // headPositionHistory = []; // Reset history
-            }
-        }
-
-        if (detection.detection.score > confidenceThreshold) { // Check confidence
+        if (detection.detection.score > confidenceThreshold) {
+        // if (detection.detection.score > confidenceThreshold && isRealFace) { // Check confidence
             if (referenceDescriptors.length > 0 && !loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
                 // USE A FOR...OF LOOP
                 for (const refDescriptor of referenceDescriptors) {
@@ -272,7 +259,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
                         loginSuccessful = true; // ADDED: Set loginSuccessful
 
                         drawBox.options.label = 'Matched face';
-                        // drawBox.draw(canvas);
+                        drawBox.draw(canvas);
 
                         // Dispatch login event with the matched reference descriptor
                         const loginEvent = new CustomEvent('click', {
@@ -292,7 +279,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
 
             // New face detected
             drawBox.options.label = 'New Face - Processing...';
-            // drawBox.draw(canvas);
+            drawBox.draw(canvas);
 
             if (!isCollecting && !loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
                 isCollecting = true;
@@ -331,7 +318,15 @@ async function initializeFaceRecognition(referenceDescriptors) {
             }
         } else {
             drawBox.options.label = `Confidence: ${detection.detection.score.toFixed(2)}`;
-            // drawBox.draw(canvas);
+            drawBox.draw(canvas);
+            // Show spoof warning
+            // if (!isRealFace) {
+            //     ctx.fillStyle = "red";
+            //     ctx.font = "20px Montserrat sans-serif";
+            //     ctx.fillText("Potential spoof detected!", 10, 110);
+            // }
+            // Prevent login/registration on spoof
+            return;
         }
 
     }, 100);
