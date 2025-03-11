@@ -55,7 +55,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
     let challenge = null;
     let challengeStartTime = 0;
     const CHALLENGE_TIMEOUT = 30000; // Time to complete the challenge
-    let challengeSuccess = true;  // Track challenge success
+    let challengeSuccess = true;  // Track challenge success, change to false once done with testing
     // Constants for head nod
     const HEAD_NOD_HISTORY_LENGTH = 5;  // Number of frames to track head position
     const NOD_THRESHOLD = 3;  // Adjust this value based on testing
@@ -154,7 +154,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
         const SPOOF_THRESHOLD = 0.8; // 80% confidence threshold
 
         // Anti-spoofing processing
-        // let isRealFace = false;
+        let isRealFace = true; // change to flase once done with testing
         // try {
         //     // Extract face region
         //     const regions = await faceapi.extractFaces(video, [detection.detection.box]);
@@ -244,8 +244,7 @@ async function initializeFaceRecognition(referenceDescriptors) {
         //     }
         // }
 
-        if (detection.detection.score > confidenceThreshold) {
-        // if (detection.detection.score > confidenceThreshold && isRealFace) { // Check confidence
+        if (detection.detection.score > confidenceThreshold && isRealFace) { // Check confidence
             if (referenceDescriptors.length > 0 && !loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
                 // USE A FOR...OF LOOP
                 for (const refDescriptor of referenceDescriptors) {
