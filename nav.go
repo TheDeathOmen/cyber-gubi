@@ -99,12 +99,12 @@ func (n *nav) Render() app.UI {
 	return app.Nav().Body(
 		app.Div().Class("navbar").Body(
 			app.Div().Class("container nav-container").Body(
-				app.If((n.entity == "individual" && n.termsAccepted) || (n.entity == "business" && n.termsAccepted && len(n.vat) > 0) || (n.loggedIn && n.isBusiness), func() app.UI {
+				app.If(n.loggedIn, func() app.UI {
 					return app.Input().ID("main-menu").Class("checkbox").Type("checkbox").Name("Main Menu").OnClick(n.doOverlay)
 				}).Else(func() app.UI {
 					return app.Input().ID("main-menu").Class("checkbox").Type("checkbox").Name("Main Menu").OnClick(n.doOverlay).Style("pointer-events", "none")
 				}),
-				app.If((n.entity == "individual" && n.termsAccepted) || (n.entity == "business" && n.termsAccepted && len(n.vat) > 0) || (n.loggedIn && n.isBusiness), func() app.UI {
+				app.If(n.loggedIn, func() app.UI {
 					return app.Div().Class("hamburger-lines").Body(
 						app.Span().Class("line line1"),
 						app.Span().Class("line line2"),
@@ -184,7 +184,7 @@ func (n *nav) Render() app.UI {
 							)
 						})
 					}).Else(func() app.UI {
-						return app.If(n.entity == "individual", func() app.UI {
+						return app.If(n.entity == "business" && len(n.vat) == 0, func() app.UI {
 							return app.Div().Class("menu-items").Body(
 								app.Div().Class("header-summary").Body(
 									app.Span().Class("logo").Text("cyber-gubi"),
@@ -192,73 +192,15 @@ func (n *nav) Render() app.UI {
 										app.Span().Text("Menu"),
 									),
 								),
-								app.Li().Body(
-									app.A().Href("/terms").Target("_blank").Text("Terms of Use"),
-								),
-								app.Li().Body(
-									app.A().Href("/privacy").Target("_blank").Text("Privacy"),
-								),
-								app.Li().Body(
-									app.A().Href("/cookie").Target("_blank").Text("Cookie"),
-								),
-							)
-						}).ElseIf(n.entity == "business", func() app.UI {
-							return app.If(len(n.vat) == 0, func() app.UI {
-								return app.Div().Class("menu-items").Body(
-									app.Div().Class("header-summary").Body(
-										app.Span().Class("logo").Text("cyber-gubi"),
-										app.Div().Class("summary-text").Body(
-											app.Span().Text("Menu"),
-										),
-									),
-									app.Label().Class("menu-label").For("vat-number").Text("VAT Number:"),
-									app.Input().ID("vat-number").Type("text").Placeholder("Enter VAT Number").Required(true),
-									app.Div().Class("menu-btn").Body(
-										app.Button().ID("submit-vat").Class("submit").Text("Submit VAT").OnClick(n.submitVAT)),
-								)
-							}).Else(func() app.UI {
-								return app.Div().Class("menu-items").Body(
-									app.Div().Class("header-summary").Body(
-										app.Span().Class("logo").Text("cyber-gubi"),
-										app.Div().Class("summary-text").Body(
-											app.Span().Text("Menu"),
-										),
-									),
-									app.Li().Body(
-										app.A().Href("/terms-business").Target("_blank").Text("Terms of Use"),
-									),
-									app.Li().Body(
-										app.A().Href("/privacy-business").Target("_blank").Text("Privacy"),
-									),
-									app.Li().Body(
-										app.A().Href("/cookie-business").Target("_blank").Text("Cookie"),
-									),
-								)
-							})
-						}).Else(func() app.UI {
-							return app.Div().Class("menu-items").Body(
-								app.Div().Class("header-summary").Body(
-									app.Span().Class("logo").Text("cyber-gubi"),
-									app.Div().Class("summary-text").Body(
-										app.Span().Text("Menu"),
-									),
-								),
-								app.Li().Body(
-									app.A().Text("For Individuals").OnClick(n.registerIndividual),
-								),
-								app.Li().Body(
-									app.Div().Class("tooltip").DataSet("direction", "bottom").Body(
-										app.Div().Class("tooltip__initiator").Body(
-											app.A().Text("For Businesses").OnClick(n.registerBusiness),
-										),
-										app.Div().Class("tooltip__item").Text("Coming soon! Join the waitlist"),
-									),
-								),
+								app.Label().Class("menu-label").For("vat-number").Text("VAT Number:"),
+								app.Input().ID("vat-number").Type("text").Placeholder("Enter VAT Number").Required(true),
+								app.Div().Class("menu-btn").Body(
+									app.Button().ID("submit-vat").Class("submit").Text("Submit VAT").OnClick(n.submitVAT)),
 							)
 						})
 					})
 				}).Else(func() app.UI {
-					return app.If(n.entity == "individual", func() app.UI {
+					return app.If(!n.isBusiness, func() app.UI {
 						return app.Div().Class("menu-items").Body(
 							app.Div().Class("header-summary").Body(
 								app.Span().Class("logo").Text("cyber-gubi"),
@@ -271,9 +213,6 @@ func (n *nav) Render() app.UI {
 							),
 							app.Li().Body(
 								app.A().Href("/payment").Text("Payment"),
-							),
-							app.Li().Body(
-								app.A().Href("/merchants").Text("Merchants"),
 							),
 							app.Li().Body(
 								app.A().Href("/subscriptions").Text("Subscriptions"),
@@ -307,6 +246,9 @@ func (n *nav) Render() app.UI {
 							),
 							app.Li().Body(
 								app.A().Href("/create-plan").Text("Create Plan"),
+							),
+							app.Li().Body(
+								app.A().Href("/clients").Text("Clients"),
 							),
 							app.Li().Body(
 								app.A().Href("/suppliers").Text("Suppliers"),

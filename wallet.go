@@ -160,6 +160,8 @@ func (w *wallet) getBalance(ctx app.Context) {
 				ctx.SetState("balance", w.userBalance)
 				if !w.isBusiness {
 					w.getIncome(ctx)
+				} else {
+					w.updateBalance(ctx)
 				}
 			})
 			return
