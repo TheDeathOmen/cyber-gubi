@@ -367,7 +367,7 @@ func (w *wallet) Render() app.UI {
 									app.Div().Class("col-3").Body(
 										app.Span().Text("Price"),
 										app.Range(w.transactions[i].ProductsServices).Slice(func(n int) app.UI {
-											return app.Span().Text(w.transactions[i].ProductsServices[n].Price)
+											return app.Span().Text(w.transactions[i].ProductsServices[n].Price / 100)
 										}),
 									),
 								),

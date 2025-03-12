@@ -235,13 +235,13 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 		transaction.Timestamp = time.Now()
 		transaction.Date = strconv.Itoa(time.Now().Year()) + "/" + strconv.Itoa(int(time.Now().Month()))
 		if tabActive == "product" {
-			for _, p := range p.products {
-				p.Price = p.Price * 100
+			for i, pr := range p.products {
+				p.products[i].Price = pr.Price * 100
 			}
 			transaction.ProductsServices = p.products
 		} else {
-			for _, s := range p.services {
-				s.Price = s.Price * 100
+			for i, sr := range p.services {
+				p.services[i].Price = sr.Price * 100
 			}
 			transaction.ProductsServices = p.services
 		}
@@ -249,7 +249,7 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 		var totalCost int
 
 		for _, ps := range transaction.ProductsServices {
-			totalCost += ps.Price * 100 * ps.Amount
+			totalCost += ps.Price * ps.Amount
 		}
 
 		transaction.TotalCost = totalCost
