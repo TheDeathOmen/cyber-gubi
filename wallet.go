@@ -28,6 +28,7 @@ type wallet struct {
 	userBalance  UserBalance
 	income       Income
 	transactions []Transaction
+	plan         Plan
 }
 
 type UserBalance struct {
@@ -57,6 +58,11 @@ func (w *wallet) OnMount(ctx app.Context) {
 	ctx.GetState("isBusiness", &w.isBusiness)
 
 	log.Println("w.isBusiness", w.isBusiness)
+
+	ctx.ObserveState("plan", &w.plan).
+		OnChange(func() {
+			log.Println("w.plan: ", w.plan)
+		})
 
 	// w.updateIncome()
 	// w.deleteIncome()
@@ -140,9 +146,6 @@ func (w *wallet) getTransactions(ctx app.Context) {
 
 				w.transactions = append(w.transactions, transactions...)
 			}
-			if w.isBusiness {
-				w.getPlan(ctx)
-			}
 		})
 	})
 }
@@ -154,10 +157,18 @@ func (w *wallet) getPlan(ctx app.Context) {
 			log.Fatal(err)
 		}
 
-		ctx.Dispatch(func(ctx app.Context) {
-			if len(p) != 0 {
-				ctx.SetState("planExists", true)
+		plans := []Plan{}
+
+		if len(p) != 0 {
+			err = json.Unmarshal(p, &plans) // Unmarshal the byte slice directly
+			if err != nil {
+				log.Fatal(err)
 			}
+		}
+
+		ctx.Dispatch(func(ctx app.Context) {
+			ctx.SetState("plan", plans[0])
+			w.getTransactions(ctx)
 		})
 	})
 }
@@ -197,7 +208,7 @@ func (w *wallet) getBalance(ctx app.Context) {
 			if !w.isBusiness && w.userBalance.LastReceived != strconv.Itoa(time.Now().Year())+"/"+strconv.Itoa(int(time.Now().Month())) {
 				w.getIncome(ctx)
 			} else {
-				w.getTransactions(ctx)
+				w.getPlan(ctx)
 			}
 		})
 	})
@@ -324,10 +335,17 @@ func (w *wallet) Render() app.UI {
 			app.Div().ID("content").Body(
 				app.Div().Class("card").Body(
 					app.Div().Class("upper-row").Body(
-						app.Div().Class("card-item").Body(
-							app.Span().Class("span-header").Text("Monthly Recurring"),
-							app.Span().Text(strconv.Itoa(w.userBalance.Income/100)+" GUBI"),
-						),
+						app.If(!w.isBusiness, func() app.UI {
+							return app.Div().Class("card-item").Body(
+								app.Span().Class("span-header").Text("Monthly Recurring"),
+								app.Span().Text(strconv.Itoa(w.userBalance.Income/100)+" GUBI"),
+							)
+						}).Else(func() app.UI {
+							return app.Div().Class("card-item").Body(
+								app.Span().Class("span-header").Text("Company Name"),
+								app.Span().Class("span-body").Text(w.plan.BusinessName),
+							)
+						}),
 					),
 					app.Div().Class("lower-row").Body(
 						app.Div().Class("card-item").Body(

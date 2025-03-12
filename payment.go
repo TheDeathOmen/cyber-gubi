@@ -42,7 +42,7 @@ type Transaction struct {
 }
 
 type ProductService struct {
-	ID     string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"` // Unique identifier for the product
+	ID     string `mapstructure:"product_id" json:"product_id" validate:"uuid_rfc4122"` // Unique identifier for the product
 	Name   string `mapstructure:"name" json:"name" validate:"uuid_rfc4122"`
 	Price  int    `mapstructure:"price" json:"price" validate:"uuid_rfc4122"`
 	Amount int    `mapstructure:"amount" json:"amount" validate:"uuid_rfc4122"`
@@ -236,11 +236,13 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 		transaction.Date = strconv.Itoa(time.Now().Year()) + "/" + strconv.Itoa(int(time.Now().Month()))
 		if tabActive == "product" {
 			for i, pr := range p.products {
+				p.products[i].ID = uuid.NewString()
 				p.products[i].Price = pr.Price * 100
 			}
 			transaction.ProductsServices = p.products
 		} else {
 			for i, sr := range p.services {
+				p.services[i].ID = uuid.NewString()
 				p.services[i].Price = sr.Price * 100
 			}
 			transaction.ProductsServices = p.services

@@ -143,13 +143,10 @@ iframe {
 .upper-row {
   display: flex;
   justify-content: space-evenly;
-  /* padding-bottom: 25px; */
-  padding-top: 50px;
+  padding: 25px;
 }
 
 .card-item {
-  /* margin-top: 25px; */
-  /* margin-left: -10px; */
   display: flex;
   flex-direction: column;
   text-align: center;
@@ -168,7 +165,7 @@ iframe {
   color: darkblue;
   font-size: 1.2rem;
   font-weight: bold;
-  padding-bottom: 25px;
+  padding-bottom: 20px;
 }
 
 .span-body {
@@ -201,7 +198,7 @@ iframe {
 .lower-row {
   display: flex;
   justify-content: space-evenly;
-  padding: 25px;
+  padding-bottom: 25px;
   /* margin-bottom: 25px; */
 }
 
@@ -246,7 +243,7 @@ iframe {
   margin: 2rem 0;
   padding-top: 10px;
   flex-direction: column;
-  max-height: 250px;
+  max-height: 225px;
   overflow-y: scroll;
 }
 
