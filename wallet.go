@@ -63,6 +63,7 @@ func (w *wallet) OnMount(ctx app.Context) {
 	// w.deleteBalances()
 	// w.deleteTransactions()
 	// w.deleteInflation()
+	// w.deletePlan()
 	// return
 
 	w.getBalance(ctx)
@@ -108,6 +109,13 @@ func (w *wallet) deleteBalances() {
 	}
 }
 
+func (w *wallet) deletePlan() {
+	err := w.sh.OrbitDocsDelete(dbPlan, "all")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func (w *wallet) getTransactions(ctx app.Context) {
 	ctx.Async(func() {
 		t, err := w.sh.OrbitDocsQuery(dbTransaction, "sender_id,receiver_id", w.userID)
@@ -132,16 +140,25 @@ func (w *wallet) getTransactions(ctx app.Context) {
 
 				w.transactions = append(w.transactions, transactions...)
 			}
+			if w.isBusiness {
+				w.getPlan(ctx)
+			}
 		})
 	})
 }
 
-func (w *wallet) getInflation(ctx app.Context) {
+func (w *wallet) getPlan(ctx app.Context) {
 	ctx.Async(func() {
-		_, err := w.sh.OrbitDocsQuery(dbInflation, "all", "")
+		p, err := w.sh.OrbitDocsQuery(dbPlan, "created_by", w.userID)
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		ctx.Dispatch(func(ctx app.Context) {
+			if len(p) != 0 {
+				ctx.SetState("planExists", true)
+			}
+		})
 	})
 }
 

@@ -235,8 +235,14 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 		transaction.Timestamp = time.Now()
 		transaction.Date = strconv.Itoa(time.Now().Year()) + "/" + strconv.Itoa(int(time.Now().Month()))
 		if tabActive == "product" {
+			for _, p := range p.products {
+				p.Price = p.Price * 100
+			}
 			transaction.ProductsServices = p.products
 		} else {
+			for _, s := range p.services {
+				s.Price = s.Price * 100
+			}
 			transaction.ProductsServices = p.services
 		}
 
@@ -248,6 +254,13 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 
 		transaction.TotalCost = totalCost
 
+		if p.userBalance.Balance-totalCost < 0 {
+			ctx.Notifications().New(app.Notification{
+				Title: "Error",
+				Body:  "Not enough funds.",
+			})
+			return
+		}
 		// update sender balance
 		err := p.updateBalance(p.userID, p.userBalance.Balance-totalCost, p.userBalance.Income, p.userBalance.LastReceived)
 		if err != nil {
@@ -315,7 +328,7 @@ func (p *payment) Render() app.UI {
 				app.Div().Class("card").Body(
 					app.Div().Class("upper-row").Body(
 						app.Div().Class("card-item").Body(
-							app.Span().Class("span-header").Text("Make a payment"),
+							app.Span().Class("span-header").Text("Make Payment"),
 							app.Form().ID("pay-form").Body(
 								app.Label().For("receiver-id").Text("Receiver ID:"),
 								app.Select().ID("receiver-id").Name("receiver-id").Body(
@@ -365,7 +378,7 @@ func (p *payment) Render() app.UI {
 											log.Println(p.services)
 											return app.Div().Body(
 												app.Input().ID("service-name").Class("service").Type("text").Name("service-name").Placeholder("Service name").OnChange(p.ValueTo(&p.services[i].Name)),
-												app.Input().ID("service-price").Class("service").Type("number").Min(1).Name("service-price").Placeholder("Price per hour").OnChange(p.ValueTo(&p.services[i].Price)),
+												app.Input().ID("service-price").Class("service").Type("number").Min(0.01).Name("service-price").Placeholder("Price per hour").OnChange(p.ValueTo(&p.services[i].Price)),
 												app.Input().ID("service-amount").Class("service").Type("number").Min(1).Name("service-amount").Step(1).Placeholder("Number of hours").OnChange(p.ValueTo(&p.services[i].Amount)),
 											)
 										}),

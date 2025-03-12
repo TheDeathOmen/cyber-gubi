@@ -30,6 +30,8 @@ func main() {
 	app.Route("/auth", func() app.Composer { return &auth{} })
 	app.Route("/wallet", func() app.Composer { return &wallet{} })
 	app.Route("/payment", func() app.Composer { return &payment{} })
+	// business only
+	app.Route("/plan", func() app.Composer { return &plan{} })
 	app.Route("/terms", func() app.Composer { return &terms{} })
 	app.Route("/privacy", func() app.Composer { return &privacy{} })
 	app.Route("/cookie", func() app.Composer { return &cookie{} })

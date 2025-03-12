@@ -17,6 +17,7 @@ type nav struct {
 	vat           string
 	entity        string
 	userID        string
+	planExists    bool
 }
 
 func newNav() *nav {
@@ -35,6 +36,9 @@ func (n *nav) OnMount(ctx app.Context) {
 	ctx.ObserveState("termsAccepted", &n.termsAccepted)
 	ctx.ObserveState("entity", &n.entity)
 	ctx.ObserveState("vat", &n.vat)
+	ctx.ObserveState("planExists", &n.planExists)
+
+	log.Println("planExists: ", n.planExists)
 }
 
 func (n *nav) doOverlay(ctx app.Context, e app.Event) {
@@ -244,9 +248,11 @@ func (n *nav) Render() app.UI {
 							app.Li().Body(
 								app.A().Href("/payment").Text("Payment"),
 							),
-							app.Li().Body(
-								app.A().Href("/create-plan").Text("Create Plan"),
-							),
+							app.If(!n.planExists, func() app.UI {
+								return app.Li().Body(
+									app.A().Href("/plan").Text("Create Plan"),
+								)
+							}),
 							app.Li().Body(
 								app.A().Href("/clients").Text("Clients"),
 							),
