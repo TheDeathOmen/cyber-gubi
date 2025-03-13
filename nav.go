@@ -60,9 +60,22 @@ func (n *nav) deleteAccount(ctx app.Context, e app.Event) {
 	e.PreventDefault()
 	n.deleteUser()
 	n.deleteBalance()
+	// delete subscriptions
+	if n.isBusiness {
+		n.deletePlan()
+		// delete clients
+		// delete suppliers
+	}
 	ctx.DelState("termsAccepted")
 	ctx.Reload()
 
+}
+
+func (n *nav) deletePlan() {
+	err := n.sh.OrbitDocsDelete(dbPlan, n.userID)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (n *nav) registerIndividual(ctx app.Context, e app.Event) {
@@ -129,7 +142,7 @@ func (n *nav) Render() app.UI {
 								app.Div().Class("header-summary").Body(
 									app.Span().Class("logo").Text("cyber-gubi"),
 									app.Div().Class("summary-text").Body(
-										app.Span().Text("Menu"),
+										app.Span().Text("Individual"),
 									),
 								),
 								app.Li().Body(
@@ -150,7 +163,7 @@ func (n *nav) Render() app.UI {
 								app.Div().Class("header-summary").Body(
 									app.Span().Class("logo").Text("cyber-gubi"),
 									app.Div().Class("summary-text").Body(
-										app.Span().Text("Menu"),
+										app.Span().Text("Business"),
 									),
 								),
 								app.Li().Body(
@@ -193,7 +206,7 @@ func (n *nav) Render() app.UI {
 								app.Div().Class("header-summary").Body(
 									app.Span().Class("logo").Text("cyber-gubi"),
 									app.Div().Class("summary-text").Body(
-										app.Span().Text("Menu"),
+										app.Span().Text("Business"),
 									),
 								),
 								app.Label().Class("menu-label").For("vat-number").Text("VAT Number:"),
@@ -209,7 +222,7 @@ func (n *nav) Render() app.UI {
 							app.Div().Class("header-summary").Body(
 								app.Span().Class("logo").Text("cyber-gubi"),
 								app.Div().Class("summary-text").Body(
-									app.Span().Text("Menu"),
+									app.Span().Text("Individual"),
 								),
 							),
 							app.Li().Body(
@@ -239,7 +252,7 @@ func (n *nav) Render() app.UI {
 							app.Div().Class("header-summary").Body(
 								app.Span().Class("logo").Text("cyber-gubi"),
 								app.Div().Class("summary-text").Body(
-									app.Span().Text("Menu"),
+									app.Span().Text("Business"),
 								),
 							),
 							app.Li().Body(
@@ -251,6 +264,10 @@ func (n *nav) Render() app.UI {
 							app.If(n.plan == Plan{}, func() app.UI {
 								return app.Li().Body(
 									app.A().Href("/plan").Text("Create Plan"),
+								)
+							}).Else(func() app.UI {
+								return app.Li().Body(
+									app.A().Href("/plan").Text("Edit Plan"),
 								)
 							}),
 							app.Li().Body(

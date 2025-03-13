@@ -69,7 +69,7 @@ func (w *wallet) OnMount(ctx app.Context) {
 	// w.deleteBalances()
 	// w.deleteTransactions()
 	// w.deleteInflation()
-	// w.deletePlan()
+	// w.deletePlans()
 	// return
 
 	w.getBalance(ctx)
@@ -115,7 +115,7 @@ func (w *wallet) deleteBalances() {
 	}
 }
 
-func (w *wallet) deletePlan() {
+func (w *wallet) deletePlans() {
 	err := w.sh.OrbitDocsDelete(dbPlan, "all")
 	if err != nil {
 		log.Fatal(err)
@@ -167,7 +167,40 @@ func (w *wallet) getPlan(ctx app.Context) {
 		}
 
 		ctx.Dispatch(func(ctx app.Context) {
-			ctx.SetState("plan", plans[0])
+			if len(p) > 0 {
+				ctx.SetState("plan", plans[0])
+			} else {
+				ctx.SetState("plan", Plan{})
+			}
+
+			w.getTransactions(ctx)
+		})
+	})
+}
+
+func (w *wallet) getPlans(ctx app.Context) {
+	ctx.Async(func() {
+		p, err := w.sh.OrbitDocsQuery(dbPlan, "all", "")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		plans := []Plan{}
+
+		if len(p) != 0 {
+			err = json.Unmarshal(p, &plans) // Unmarshal the byte slice directly
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		ctx.Dispatch(func(ctx app.Context) {
+			if len(p) > 0 {
+				ctx.SetState("plans", plans[0])
+			} else {
+				ctx.SetState("plans", plans)
+			}
+
 			w.getTransactions(ctx)
 		})
 	})
@@ -208,7 +241,11 @@ func (w *wallet) getBalance(ctx app.Context) {
 			if !w.isBusiness && w.userBalance.LastReceived != strconv.Itoa(time.Now().Year())+"/"+strconv.Itoa(int(time.Now().Month())) {
 				w.getIncome(ctx)
 			} else {
-				w.getPlan(ctx)
+				if w.isBusiness {
+					w.getPlan(ctx)
+				} else {
+					w.getPlans(ctx)
+				}
 			}
 		})
 	})
@@ -349,7 +386,7 @@ func (w *wallet) Render() app.UI {
 					),
 					app.Div().Class("lower-row").Body(
 						app.Div().Class("card-item").Body(
-							app.Span().Class("span-header").Text("My Payment ID"),
+							app.Span().Class("span-header").Text("Payment ID"),
 							app.Span().Class("span-body").Text(w.userID),
 						),
 					),

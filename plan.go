@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
@@ -21,6 +22,7 @@ type plan struct {
 	userID       string
 	businessName string
 	price        int
+	plan         Plan
 }
 
 type Plan struct {
@@ -40,6 +42,10 @@ func (p *plan) OnMount(ctx app.Context) {
 	}
 
 	ctx.GetState("userID", &p.userID)
+
+	ctx.ObserveState("plan", &p.plan)
+
+	log.Println("p.plan: ", p.plan)
 }
 
 func (p *plan) createPlan(ctx app.Context, e app.Event) {
@@ -52,11 +58,21 @@ func (p *plan) createPlan(ctx app.Context, e app.Event) {
 
 func (p *plan) storePLan(ctx app.Context) {
 	ctx.Async(func() {
-		plan := Plan{
-			ID:           uuid.NewString(),
-			BusinessName: p.businessName,
-			Price:        p.price * 100,
-			CreatedBy:    p.userID,
+		var plan Plan
+		if (p.plan == Plan{}) {
+			plan = Plan{
+				ID:           uuid.NewString(),
+				BusinessName: p.businessName,
+				Price:        p.price * 100,
+				CreatedBy:    p.userID,
+			}
+		} else {
+			plan = Plan{
+				ID:           p.plan.ID,
+				BusinessName: p.plan.BusinessName,
+				Price:        p.price * 100,
+				CreatedBy:    p.plan.CreatedBy,
+			}
 		}
 
 		planJSON, err := json.Marshal(plan)
@@ -70,10 +86,17 @@ func (p *plan) storePLan(ctx app.Context) {
 		}
 
 		ctx.Dispatch(func(ctx app.Context) {
-			ctx.Notifications().New(app.Notification{
-				Title: "Success",
-				Body:  "Plan created successfully!",
-			})
+			if (p.plan == Plan{}) {
+				ctx.Notifications().New(app.Notification{
+					Title: "Success",
+					Body:  "Plan created successfully!",
+				})
+			} else {
+				ctx.Notifications().New(app.Notification{
+					Title: "Success",
+					Body:  "Plan updated successfully!",
+				})
+			}
 			ctx.Navigate("/wallet")
 		})
 	})
@@ -97,17 +120,29 @@ func (p *plan) Render() app.UI {
 				app.Div().Class("card").Body(
 					app.Div().Class("upper-row").Body(
 						app.Div().Class("card-item").Body(
-							app.Span().Class("span-header").Text("Create Plan"),
+							app.If(p.plan == Plan{}, func() app.UI {
+								return app.Span().Class("span-header").Text("Create Plan")
+							}).Else(func() app.UI {
+								return app.Span().Class("span-header").Text("Update Plan")
+							}),
+
 							app.Form().ID("plan-form").Body(
 								app.Div().ID("plan").Body(
-									app.Div().Body(
-										app.Input().ID("plan-name").Class("product").Type("text").Name("plan-name").Placeholder("Business name").Required(true).OnChange(p.ValueTo(&p.businessName)),
-										app.Input().ID("plan-price").Class("product").Type("number").Min(1).Name("plan-price").Placeholder("Monthly amount").Required(true).OnChange(p.ValueTo(&p.price)),
-									),
+									app.If(p.plan == Plan{}, func() app.UI {
+										return app.Div().Body(
+											app.Input().ID("plan-name").Class("product").Type("text").Name("plan-name").Placeholder("Business name").Required(true).OnChange(p.ValueTo(&p.businessName)),
+											app.Input().ID("plan-price").Class("product").Type("number").Min(1).Name("plan-price").Placeholder("Monthly amount").Required(true).OnChange(p.ValueTo(&p.price)),
+										)
+									}).Else(func() app.UI {
+										return app.Div().Body(
+											app.Input().ID("plan-name").Class("product").Type("text").Name("plan-name").Value(p.plan.BusinessName).ReadOnly(true),
+											app.Input().ID("plan-price").Class("product").Type("number").Min(1).Name("plan-price").Placeholder(strconv.Itoa(p.plan.Price/100)).Required(true).OnChange(p.ValueTo(&p.price)),
+										)
+									}),
 								),
 								app.Div().Class("drawer drawer-pay").Body(
 									app.Div().Class("menu-btn").Body(
-										app.Button().Class("submit").Type("submit").Text("Create Plan").OnClick(p.createPlan),
+										app.Button().Class("submit").Type("submit").Text("Submit").OnClick(p.createPlan),
 									),
 								),
 							),
