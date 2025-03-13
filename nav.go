@@ -14,6 +14,7 @@ type nav struct {
 	loggedIn      bool
 	termsAccepted bool
 	isBusiness    bool
+	businessName  string
 	vat           string
 	entity        string
 	userID        string
@@ -35,6 +36,7 @@ func (n *nav) OnMount(ctx app.Context) {
 
 	ctx.ObserveState("termsAccepted", &n.termsAccepted)
 	ctx.ObserveState("entity", &n.entity)
+	ctx.ObserveState("businessName", &n.businessName)
 	ctx.ObserveState("vat", &n.vat)
 	ctx.ObserveState("plan", &n.plan)
 
@@ -89,10 +91,13 @@ func (n *nav) registerBusiness(ctx app.Context, e app.Event) {
 }
 
 func (n *nav) submitVAT(ctx app.Context, e app.Event) {
-	valid := app.Window().GetElementByID("vat-number").Call("reportValidity").Bool()
-	if valid {
+	validVAT := app.Window().GetElementByID("vat-number").Call("reportValidity").Bool()
+	validBusinessName := app.Window().GetElementByID("business-name").Call("reportValidity").Bool()
+	if validVAT && validBusinessName {
+		businessName := app.Window().GetElementByID("business-name").Get("value").String()
 		vat := app.Window().GetElementByID("vat-number").Get("value").String()
 		ctx.SetState("vat", vat)
+		ctx.SetState("businessName", businessName)
 		app.Window().GetElementByID("main-menu").Call("click")
 	}
 }
@@ -201,7 +206,7 @@ func (n *nav) Render() app.UI {
 							)
 						})
 					}).Else(func() app.UI {
-						return app.If(n.entity == "business" && len(n.vat) == 0, func() app.UI {
+						return app.If(n.entity == "business" && (len(n.vat) == 0 || len(n.businessName) == 0), func() app.UI {
 							return app.Div().Class("menu-items").Body(
 								app.Div().Class("header-summary").Body(
 									app.Span().Class("logo").Text("cyber-gubi"),
@@ -209,8 +214,10 @@ func (n *nav) Render() app.UI {
 										app.Span().Text("Business"),
 									),
 								),
+								app.Label().Class("menu-label").For("business-name").Text("Business Name:"),
+								app.Input().ID("business-name").Class("input-register").Type("text").Placeholder("Enter business name").Required(true),
 								app.Label().Class("menu-label").For("vat-number").Text("VAT Number:"),
-								app.Input().ID("vat-number").Type("text").Placeholder("Enter VAT Number").Required(true),
+								app.Input().ID("vat-number").Class("input-register").Type("text").Placeholder("Enter VAT number").Required(true),
 								app.Div().Class("menu-btn").Body(
 									app.Button().ID("submit-vat").Class("submit").Text("Submit VAT").OnClick(n.submitVAT)),
 							)

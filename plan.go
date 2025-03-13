@@ -26,10 +26,9 @@ type plan struct {
 }
 
 type Plan struct {
-	ID           string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`                     // Unique identifier for the transaction
-	BusinessName string `mapstructure:"business_name" json:"business_name" validate:"uuid_rfc4122"` // Business name
-	Price        int    `mapstructure:"price" json:"price" validate:"uuid_rfc4122"`                 // Monthly recurring price
-	CreatedBy    string `mapstructure:"created_by" json:"created_by" validate:"uuid_rfc4122"`       // User ID of business who created it
+	ID        string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`               // Unique identifier for the transaction
+	Price     int    `mapstructure:"price" json:"price" validate:"uuid_rfc4122"`           // Monthly recurring price
+	CreatedBy string `mapstructure:"created_by" json:"created_by" validate:"uuid_rfc4122"` // User ID of business who created it
 }
 
 func (p *plan) OnMount(ctx app.Context) {
@@ -61,17 +60,15 @@ func (p *plan) storePLan(ctx app.Context) {
 		var plan Plan
 		if (p.plan == Plan{}) {
 			plan = Plan{
-				ID:           uuid.NewString(),
-				BusinessName: p.businessName,
-				Price:        p.price * 100,
-				CreatedBy:    p.userID,
+				ID:        uuid.NewString(),
+				Price:     p.price * 100,
+				CreatedBy: p.userID,
 			}
 		} else {
 			plan = Plan{
-				ID:           p.plan.ID,
-				BusinessName: p.plan.BusinessName,
-				Price:        p.price * 100,
-				CreatedBy:    p.plan.CreatedBy,
+				ID:        p.plan.ID,
+				Price:     p.price * 100,
+				CreatedBy: p.plan.CreatedBy,
 			}
 		}
 
@@ -130,13 +127,11 @@ func (p *plan) Render() app.UI {
 								app.Div().ID("plan").Body(
 									app.If(p.plan == Plan{}, func() app.UI {
 										return app.Div().Body(
-											app.Input().ID("plan-name").Class("product").Type("text").Name("plan-name").Placeholder("Business name").Required(true).OnChange(p.ValueTo(&p.businessName)),
 											app.Input().ID("plan-price").Class("product").Type("number").Min(1).Name("plan-price").Placeholder("Monthly amount").Required(true).OnChange(p.ValueTo(&p.price)),
 										)
 									}).Else(func() app.UI {
 										return app.Div().Body(
-											app.Input().ID("plan-name").Class("product").Type("text").Name("plan-name").Value(p.plan.BusinessName).ReadOnly(true),
-											app.Input().ID("plan-price").Class("product").Type("number").Min(1).Name("plan-price").Placeholder(strconv.Itoa(p.plan.Price/100)).Required(true).OnChange(p.ValueTo(&p.price)),
+											app.Input().ID("plan-price").Class("product").Type("number").Min(1).Name("plan-price").Placeholder(strconv.Itoa(p.plan.Price / 100)).Required(true).OnChange(p.ValueTo(&p.price)),
 										)
 									}),
 								),

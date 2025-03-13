@@ -380,7 +380,7 @@ func (p *payment) Render() app.UI {
 											log.Println(p.services)
 											return app.Div().Body(
 												app.Input().ID("service-name").Class("service").Type("text").Name("service-name").Placeholder("Service name").OnChange(p.ValueTo(&p.services[i].Name)),
-												app.Input().ID("service-price").Class("service").Type("number").Min(0.01).Name("service-price").Placeholder("Price per hour").OnChange(p.ValueTo(&p.services[i].Price)),
+												app.Input().ID("service-price").Class("service").Type("number").Min(1).Name("service-price").Placeholder("Price per hour").OnChange(p.ValueTo(&p.services[i].Price)),
 												app.Input().ID("service-amount").Class("service").Type("number").Min(1).Name("service-amount").Step(1).Placeholder("Number of hours").OnChange(p.ValueTo(&p.services[i].Amount)),
 											)
 										}),

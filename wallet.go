@@ -24,11 +24,11 @@ type wallet struct {
 	sh           *shell.Shell
 	loggedIn     bool
 	isBusiness   bool
+	businessName string
 	userID       string
 	userBalance  UserBalance
 	income       Income
 	transactions []Transaction
-	plan         Plan
 }
 
 type UserBalance struct {
@@ -59,10 +59,9 @@ func (w *wallet) OnMount(ctx app.Context) {
 
 	log.Println("w.isBusiness", w.isBusiness)
 
-	ctx.ObserveState("plan", &w.plan).
-		OnChange(func() {
-			log.Println("w.plan: ", w.plan)
-		})
+	ctx.GetState("businessName", &w.businessName)
+
+	log.Println("w.businessName", w.businessName)
 
 	// w.updateIncome()
 	// w.deleteIncome()
@@ -145,6 +144,11 @@ func (w *wallet) getTransactions(ctx app.Context) {
 				})
 
 				w.transactions = append(w.transactions, transactions...)
+				app.Window().GetElementByID("transactions-all").Call("setAttribute", "style", "overflow-y: scroll")
+			}
+
+			if !w.isBusiness {
+				w.getPlansWithoutTransactions(ctx)
 			}
 		})
 	})
@@ -206,6 +210,32 @@ func (w *wallet) getPlans(ctx app.Context) {
 	})
 }
 
+func (w *wallet) getPlansWithoutTransactions(ctx app.Context) {
+	ctx.Async(func() {
+		p, err := w.sh.OrbitDocsQuery(dbPlan, "all", "")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		plans := []Plan{}
+
+		if len(p) != 0 {
+			err = json.Unmarshal(p, &plans) // Unmarshal the byte slice directly
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		ctx.Dispatch(func(ctx app.Context) {
+			if len(p) > 0 {
+				ctx.SetState("plans", plans[0])
+			} else {
+				ctx.SetState("plans", plans)
+			}
+		})
+	})
+}
+
 func (w *wallet) getBalance(ctx app.Context) {
 	ctx.Async(func() {
 		b, err := w.sh.OrbitDocsQuery(dbUserBalance, "_id", w.userID)
@@ -221,6 +251,7 @@ func (w *wallet) getBalance(ctx app.Context) {
 				ctx.SetState("balance", w.userBalance)
 				if !w.isBusiness {
 					w.getIncome(ctx)
+					return
 				} else {
 					w.updateBalance(ctx)
 				}
@@ -379,8 +410,8 @@ func (w *wallet) Render() app.UI {
 							)
 						}).Else(func() app.UI {
 							return app.Div().Class("card-item").Body(
-								app.Span().Class("span-header").Text("Company Name"),
-								app.Span().Class("span-body").Text(w.plan.BusinessName),
+								app.Span().Class("span-header").Text("Business Name"),
+								app.Span().Class("span-body").Text(w.businessName),
 							)
 						}),
 					),
@@ -391,8 +422,13 @@ func (w *wallet) Render() app.UI {
 						),
 					),
 				),
-				app.Div().Class("transactions").Body(
+				app.Div().ID("transactions-all").Class("transactions").Body(
 					app.Span().Class("t-desc").Text("Recent Transactions"),
+					app.If(len(w.transactions) == 0, func() app.UI {
+						return app.Div().Class("transaction").Body(
+							app.Span().Class("empty").Text("No transactions yet"),
+						).Style("pointer-events", "none")
+					}),
 					app.Range(w.transactions).Slice(func(i int) app.UI {
 						return app.Div().Class("transaction").Body(
 							app.Div().Class("t-details").Body(

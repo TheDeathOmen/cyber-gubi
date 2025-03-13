@@ -31,6 +31,7 @@ type auth struct {
 	entity                 string
 	termsAccepted          bool
 	notificationPermission app.NotificationPermission
+	businessName           string
 	vat                    string
 }
 
@@ -191,6 +192,8 @@ func (a *auth) OnMount(ctx app.Context) {
 
 	ctx.ObserveState("vat", &a.vat).
 		OnChange(func() {
+			ctx.GetState("businessName", &a.businessName)
+			log.Println("a.vat.businessName: ", a.businessName)
 			log.Println("a.vat: ", a.vat)
 			log.Println("a.vat.entity: ", a.entity)
 			log.Println("a.vat.termsAccepted: ", a.termsAccepted)
@@ -264,6 +267,7 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 			ctx.SetState("userID", string(user.ID))
 			if len(user.VAT) > 0 {
 				ctx.SetState("isBusiness", true)
+				ctx.SetState("businessName", user.Name)
 			}
 			a.beginLogin(ctx, string(user.CredentialIDs[0].ID))
 		}
@@ -374,7 +378,8 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 		}
 
 		user := &User{
-			ID: protocol.URLEncodedBase64(userID),
+			Name: a.businessName,
+			ID:   protocol.URLEncodedBase64(userID),
 			CredentialIDs: []webauthn.Credential{
 				{
 					ID: []byte(credentialID),
@@ -480,6 +485,7 @@ func (a *auth) beginRegistration(ctx app.Context) {
 			ctx.SetState("userID", userID)
 			if len(a.vat) > 0 {
 				ctx.SetState("isBusiness", true)
+				ctx.SetState("businessName", a.businessName)
 			}
 			a.beginLogin(ctx, credentialID)
 		} else {
