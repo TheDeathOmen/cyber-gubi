@@ -30,6 +30,15 @@ type payment struct {
 	activeTab     string
 }
 
+type Subscription struct {
+	ID        string    `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`               // Unique identifier for the transaction
+	PlanID    string    `mapstructure:"plan_id" json:"plan_id" validate:"uuid_rfc4122"`       // Plan id
+	UserID    string    `mapstructure:"user_id" json:"user_id" validate:"uuid_rfc4122"`       // User id
+	Price     int       `mapstructure:"price" json:"price" validate:"uuid_rfc4122"`           // Price
+	StartDate time.Time `mapstructure:"start_date" json:"start_date" validate:"uuid_rfc4122"` // Start date of subscription
+	EndDate   time.Time `mapstructure:"end_date" json:"end_date" validate:"uuid_rfc4122"`     // End date of subscription
+}
+
 type Transaction struct {
 	ID               string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`                 // Unique identifier for the transaction
 	SenderID         string `mapstructure:"sender_id" json:"sender_id" validate:"uuid_rfc4122"`     // Sender user id
@@ -227,11 +236,11 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 	valid := app.Window().GetElementByID("pay-form").Call("reportValidity").Bool()
 	if valid {
 		tabActive := app.Window().Get("document").Call("getElementsByClassName", "tab-active").Index(0).Get("value").String()
-		receivedID := app.Window().GetElementByID("receiver-id").Get("value").String()
+		receiverID := app.Window().GetElementByID("receiver-id").Get("value").String()
 		transaction := Transaction{}
 		transaction.ID = uuid.NewString()
 		transaction.SenderID = p.userID
-		transaction.ReceiverID = receivedID
+		transaction.ReceiverID = receiverID
 		transaction.Timestamp = time.Now()
 		transaction.Date = strconv.Itoa(time.Now().Year()) + "/" + strconv.Itoa(int(time.Now().Month()))
 		if tabActive == "product" {

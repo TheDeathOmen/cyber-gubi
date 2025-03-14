@@ -74,7 +74,7 @@ func (n *nav) deleteAccount(ctx app.Context, e app.Event) {
 }
 
 func (n *nav) deletePlan() {
-	err := n.sh.OrbitDocsDelete(dbPlan, n.userID)
+	err := n.sh.OrbitDocsDelete(dbPlan, n.plan.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func (n *nav) Render() app.UI {
 									),
 								),
 								app.Label().Class("menu-label").For("business-name").Text("Business Name:"),
-								app.Input().ID("business-name").Class("input-register").Type("text").Placeholder("Enter business name").Required(true),
+								app.Input().ID("business-name").Class("input-register").Type("text").Placeholder("Enter business name").MaxLength(22).Required(true),
 								app.Label().Class("menu-label").For("vat-number").Text("VAT Number:"),
 								app.Input().ID("vat-number").Class("input-register").Type("text").Placeholder("Enter VAT number").Required(true),
 								app.Div().Class("menu-btn").Body(

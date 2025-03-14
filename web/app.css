@@ -168,6 +168,13 @@ iframe {
   padding-bottom: 20px;
 }
 
+.span-header-sub {
+  color: darkblue;
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 0;
+}
+
 .span-body {
   max-width: 80%;
   margin: 0 auto;
@@ -244,6 +251,18 @@ iframe {
   padding-top: 10px;
   flex-direction: column;
   max-height: 225px;
+  overflow-y: auto;
+}
+
+.subscriptions {
+  font-family: 'Montserrat', sans-serif;
+  display: flex;
+  position: relative;
+  margin: 2rem 0;
+  padding-top: 10px;
+  flex-direction: column;
+  height: 450px;
+  overflow-y: auto;
 }
 
 .t-desc {
@@ -267,9 +286,28 @@ iframe {
   margin-bottom:20px;
 }
 
+.subscription {
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color:white;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.02), 0 10px 10px rgba(0,0,0,0.0);
+  border: 1px solid lightseagreen;
+  border-radius: 50px;
+  font-weight: 500;
+  color: darkblue;
+  margin-bottom: 10px;
+}
+
 .t-details {
   width: 85%;
   height: 55px;
+  overflow: hidden;
+}
+
+.s-details {
+  width: 85%;
   overflow: hidden;
 }
 
@@ -279,6 +317,10 @@ iframe {
 }
 
 .t-price {
+  text-align: center;
+}
+
+.s-price {
   text-align: center;
 }
 
@@ -301,9 +343,19 @@ iframe {
   margin-bottom: 5px;
 }
 
+.s-title {
+  padding-left: 15px;
+}
+
 .t-time {
   font-size: 0.6rem;
   opacity: 0.6;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+.s-time {
+  font-size: 0.6rem;
   font-weight: 300;
   letter-spacing: 1px;
 }
@@ -378,6 +430,20 @@ iframe {
   cursor: pointer;
   transition: all 0.1s;
   opacity: 0.9;
+}
+
+.menu-subscribed {
+  background-color: darkblue;
+}
+
+.menu-subscribed:hover {
+  box-shadow: none!important;
+}
+
+.menu-sub {
+  scale: 0.6;
+  position: relative;
+  left: -30px;
 }
 
 .menu-add-item {
@@ -504,6 +570,15 @@ button {
   font-size: 1rem;
   font-family: Montserrat, sans-serif;
   cursor: pointer;
+}
+
+.submit-sub {
+  font-size: 1.5rem;
+  font-weight: bold
+}
+
+.submit-sub:disabled {
+  cursor: auto;
 }
 
 

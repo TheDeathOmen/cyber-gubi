@@ -27,6 +27,7 @@ type plan struct {
 
 type Plan struct {
 	ID        string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`               // Unique identifier for the transaction
+	Name      string `mapstructure:"name" json:"name" validate:"uuid_rfc4122"`             // Business name
 	Price     int    `mapstructure:"price" json:"price" validate:"uuid_rfc4122"`           // Monthly recurring price
 	CreatedBy string `mapstructure:"created_by" json:"created_by" validate:"uuid_rfc4122"` // User ID of business who created it
 }
@@ -45,6 +46,10 @@ func (p *plan) OnMount(ctx app.Context) {
 	ctx.ObserveState("plan", &p.plan)
 
 	log.Println("p.plan: ", p.plan)
+
+	ctx.ObserveState("businessName", &p.businessName)
+
+	log.Println("p.businessName: ", p.businessName)
 }
 
 func (p *plan) createPlan(ctx app.Context, e app.Event) {
@@ -61,12 +66,14 @@ func (p *plan) storePLan(ctx app.Context) {
 		if (p.plan == Plan{}) {
 			plan = Plan{
 				ID:        uuid.NewString(),
+				Name:      p.businessName,
 				Price:     p.price * 100,
 				CreatedBy: p.userID,
 			}
 		} else {
 			plan = Plan{
 				ID:        p.plan.ID,
+				Name:      p.businessName,
 				Price:     p.price * 100,
 				CreatedBy: p.plan.CreatedBy,
 			}

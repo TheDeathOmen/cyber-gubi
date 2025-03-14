@@ -144,17 +144,12 @@ func (w *wallet) getTransactions(ctx app.Context) {
 				})
 
 				w.transactions = append(w.transactions, transactions...)
-				app.Window().GetElementByID("transactions-all").Call("setAttribute", "style", "overflow-y: scroll")
-			}
-
-			if !w.isBusiness {
-				w.getPlansWithoutTransactions(ctx)
 			}
 		})
 	})
 }
 
-func (w *wallet) getPlan(ctx app.Context) {
+func (w *wallet) getOwnPlan(ctx app.Context) {
 	ctx.Async(func() {
 		p, err := w.sh.OrbitDocsQuery(dbPlan, "created_by", w.userID)
 		if err != nil {
@@ -178,60 +173,6 @@ func (w *wallet) getPlan(ctx app.Context) {
 			}
 
 			w.getTransactions(ctx)
-		})
-	})
-}
-
-func (w *wallet) getPlans(ctx app.Context) {
-	ctx.Async(func() {
-		p, err := w.sh.OrbitDocsQuery(dbPlan, "all", "")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		plans := []Plan{}
-
-		if len(p) != 0 {
-			err = json.Unmarshal(p, &plans) // Unmarshal the byte slice directly
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		ctx.Dispatch(func(ctx app.Context) {
-			if len(p) > 0 {
-				ctx.SetState("plans", plans[0])
-			} else {
-				ctx.SetState("plans", plans)
-			}
-
-			w.getTransactions(ctx)
-		})
-	})
-}
-
-func (w *wallet) getPlansWithoutTransactions(ctx app.Context) {
-	ctx.Async(func() {
-		p, err := w.sh.OrbitDocsQuery(dbPlan, "all", "")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		plans := []Plan{}
-
-		if len(p) != 0 {
-			err = json.Unmarshal(p, &plans) // Unmarshal the byte slice directly
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		ctx.Dispatch(func(ctx app.Context) {
-			if len(p) > 0 {
-				ctx.SetState("plans", plans[0])
-			} else {
-				ctx.SetState("plans", plans)
-			}
 		})
 	})
 }
@@ -273,9 +214,9 @@ func (w *wallet) getBalance(ctx app.Context) {
 				w.getIncome(ctx)
 			} else {
 				if w.isBusiness {
-					w.getPlan(ctx)
+					w.getOwnPlan(ctx)
 				} else {
-					w.getPlans(ctx)
+					w.getTransactions(ctx)
 				}
 			}
 		})
@@ -422,7 +363,7 @@ func (w *wallet) Render() app.UI {
 						),
 					),
 				),
-				app.Div().ID("transactions-all").Class("transactions").Body(
+				app.Div().Class("transactions").Body(
 					app.Span().Class("t-desc").Text("Recent Transactions"),
 					app.If(len(w.transactions) == 0, func() app.UI {
 						return app.Div().Class("transaction").Body(
