@@ -51,9 +51,9 @@ The app runs on the public IPFS network. In order to use it follow the steps bel
 1. Install the official IPFS Desktop http://docs.ipfs.io/install/ipfs-desktop/
 2. Install IPFS Companion http://docs.ipfs.io/install/ipfs-companion/
 3. Install golang 1.20 or later version - https://go.dev/doc/install
-4.  Clone https://github.com/stateless-minds/kubo to your local machine
+4.  Clone https://github.com/stateless-minds/cyber-gubi-local to your local machine
 ```
-git clone https://github.com/stateless-minds/kubo.git
+git clone https://github.com/stateless-minds/cyber-gubi-local.git
 ```
 5.  Follow the instructions here to open your config file: https://github.com/ipfs/kubo/blob/master/docs/config.md. Usually it's `~/.ipfs/config` on Linux. Add the following snippet to the `HTTPHeaders`:
 ```{
@@ -65,12 +65,12 @@ git clone https://github.com/stateless-minds/kubo.git
     }
   },
  ```
-6. Build it and start the daemon:
+6. Set a password, unzip the binary and run the daemon:
 ``` 
-cd kubo
 export ENC_PASSWORD=your_password_here
-make build
-./cmd/ipfs/ipfs daemon --enable-pubsub-experiment
+unzip ipfs.zip
+go run main.go
+./ipfs daemon --enable-pubsub-experiment
 ```
 7.  Navigate to <a href="https://ipfs.io/ipns/k51qzi5uqu5djkqrrcswqzxsdg3r9fxtzatjac00a2txm7woss7s78s0qihxgr">Cyber Gubi</a>
 8.  Pin it to your local node so that you become a permanent host of it while you have IPFS daemon running

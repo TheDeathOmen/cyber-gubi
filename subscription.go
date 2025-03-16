@@ -60,7 +60,7 @@ func (s *subscription) getPlans(ctx app.Context) {
 
 		ctx.Dispatch(func(ctx app.Context) {
 			s.plans = plans
-			s.getSubscriptions(ctx)
+			s.deleteExpiredSubscriptions(ctx)
 		})
 	})
 }
@@ -154,6 +154,16 @@ func (s *subscription) storeSubscription(subscription Subscription) error {
 	}
 
 	return nil
+}
+
+func (s *subscription) deleteExpiredSubscriptions(ctx app.Context) {
+	ctx.Async(func() {
+		s.sh.DeleteExpiredSubscriptions()
+
+		ctx.Dispatch(func(ctx app.Context) {
+			s.getSubscriptions(ctx)
+		})
+	})
 }
 
 func (s *subscription) deleteSubscription(id string) error {
@@ -256,7 +266,7 @@ func (s *subscription) doSubscribe(ctx app.Context, e app.Event) {
 	}
 
 	s.userBalance.Balance = s.userBalance.Balance - transaction.TotalCost
-	log.Println("s.subscriptions before update: ", s.subscriptions)
+	s.subscriptions = append(s.subscriptions, subscription)
 	ctx.Update()
 
 	ctx.Notifications().New(app.Notification{
@@ -307,10 +317,12 @@ func (s *subscription) Render() app.UI {
 									app.If(len(s.subscriptions) > 0, func() app.UI {
 										return app.Range(s.subscriptions).Slice(func(n int) app.UI {
 											return app.If(s.subscriptions[n].PlanID == s.plans[i].ID && s.subscriptions[n].UserID == s.userID, func() app.UI {
-												s.subscribed = true
-												return app.Div().Class("menu-btn menu-sub menu-subscribed").Body(
-													app.Button().Class("submit submit-sub").Type("submit").Text("Subscribed").Disabled(true),
-												)
+												return app.If(time.Now().Before(s.subscriptions[n].EndDate), func() app.UI {
+													s.subscribed = true
+													return app.Div().Class("menu-btn menu-sub menu-subscribed").Body(
+														app.Button().Class("submit submit-sub").Type("submit").Text("Subscribed").Disabled(true),
+													)
+												})
 											})
 										})
 									}),

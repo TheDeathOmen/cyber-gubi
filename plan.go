@@ -129,7 +129,6 @@ func (p *plan) Render() app.UI {
 							}).Else(func() app.UI {
 								return app.Span().Class("span-header").Text("Update Plan")
 							}),
-
 							app.Form().ID("plan-form").Body(
 								app.Div().ID("plan").Body(
 									app.If(p.plan == Plan{}, func() app.UI {

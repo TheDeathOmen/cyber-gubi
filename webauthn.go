@@ -278,7 +278,7 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 func (a *auth) fetchUsers(ctx app.Context) {
 	descriptors := [][]float32{}
 
-	users := a.getUsers()
+	users := a.getMe()
 
 	a.users = users
 
@@ -326,8 +326,8 @@ func (a *auth) getUser(key, value string) User {
 	return users[0]
 }
 
-func (a *auth) getUsers() []*User {
-	res, err := a.sh.OrbitDocsQueryEnc(dbUser, "all", "")
+func (a *auth) getMe() []*User {
+	res, err := a.sh.OrbitDocsQueryEnc(dbUser, "me", "")
 	if err != nil {
 		log.Fatal(err)
 	}
