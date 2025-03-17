@@ -39,8 +39,6 @@ func (n *nav) OnMount(ctx app.Context) {
 	ctx.ObserveState("businessName", &n.businessName)
 	ctx.ObserveState("vat", &n.vat)
 	ctx.ObserveState("plan", &n.plan)
-
-	log.Println("n.plan: ", n.plan)
 }
 
 func (n *nav) doOverlay(ctx app.Context, e app.Event) {

@@ -265,7 +265,11 @@ iframe {
   overflow-y: auto;
 }
 
-.t-desc {
+.c-sub {
+  height: 300px!important;
+}
+
+.t-desc, .s-desc {
   color: darkblue;
   font-size: 1rem;
   font-weight: bold;
@@ -284,6 +288,7 @@ iframe {
   border: 1px solid lightseagreen;
   border-radius: 20px;
   margin-bottom:20px;
+  color: darkblue;
 }
 
 .subscription {
@@ -306,10 +311,10 @@ iframe {
   overflow: hidden;
 }
 
-.s-details {
+/* .s-details {
   width: 85%;
   overflow: hidden;
-}
+} */
 
 .t-more-details {
   padding-top: 10px;
@@ -345,6 +350,12 @@ iframe {
 
 .s-title {
   padding-left: 15px;
+  font-weight: bold;
+}
+
+.c-title {
+  font-size: 0.8rem;
+  padding-bottom: 5px;
 }
 
 .t-time {

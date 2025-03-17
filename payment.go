@@ -231,8 +231,6 @@ func (p *payment) removeService(ctx app.Context, e app.Event) {
 func (p *payment) doPayment(ctx app.Context, e app.Event) {
 	e.PreventDefault()
 
-	log.Println(p.products)
-
 	valid := app.Window().GetElementByID("pay-form").Call("reportValidity").Bool()
 	if valid {
 		tabActive := app.Window().Get("document").Call("getElementsByClassName", "tab-active").Index(0).Get("value").String()
@@ -372,7 +370,6 @@ func (p *payment) Render() app.UI {
 									Class("tab-content").
 									Body(
 										app.Range(p.productsIndex).Slice(func(i int) app.UI {
-											log.Println(p.products)
 											return app.Div().Body(
 												app.Input().ID("product-name-"+strconv.Itoa(i)).Class("product").Type("text").Name("product-name").Placeholder("Product name").Required(true).OnChange(p.ValueTo(&p.products[i].Name)),
 												app.Input().ID("product-price-"+strconv.Itoa(i)).Class("product").Type("number").Min(1).Name("product-price").Placeholder("Single price").Required(true).OnChange(p.ValueTo(&p.products[i].Price)),
@@ -386,7 +383,6 @@ func (p *payment) Render() app.UI {
 									Class("tab-content").
 									Body(
 										app.Range(p.servicesIndex).Slice(func(i int) app.UI {
-											log.Println(p.services)
 											return app.Div().Body(
 												app.Input().ID("service-name").Class("service").Type("text").Name("service-name").Placeholder("Service name").OnChange(p.ValueTo(&p.services[i].Name)),
 												app.Input().ID("service-price").Class("service").Type("number").Min(1).Name("service-price").Placeholder("Price per hour").OnChange(p.ValueTo(&p.services[i].Price)),

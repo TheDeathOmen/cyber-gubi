@@ -45,11 +45,7 @@ func (p *plan) OnMount(ctx app.Context) {
 
 	ctx.ObserveState("plan", &p.plan)
 
-	log.Println("p.plan: ", p.plan)
-
 	ctx.ObserveState("businessName", &p.businessName)
-
-	log.Println("p.businessName: ", p.businessName)
 }
 
 func (p *plan) createPlan(ctx app.Context, e app.Event) {

@@ -175,16 +175,10 @@ func (a *auth) OnMount(ctx app.Context) {
 
 	a.fetchUsers(ctx)
 
-	ctx.ObserveState("entity", &a.entity).
-		OnChange(func() {
-			log.Println("a.entity: ", a.entity)
-		})
+	ctx.ObserveState("entity", &a.entity)
 
 	ctx.ObserveState("termsAccepted", &a.termsAccepted).
 		OnChange(func() {
-			log.Println("a.termsAccepted: ", a.termsAccepted)
-			log.Println("a.termsAccepted.entity: ", a.entity)
-
 			if a.entity == "individual" {
 				a.beginRegistration(ctx)
 			}
@@ -192,12 +186,6 @@ func (a *auth) OnMount(ctx app.Context) {
 
 	ctx.ObserveState("vat", &a.vat).
 		OnChange(func() {
-			ctx.GetState("businessName", &a.businessName)
-			log.Println("a.vat.businessName: ", a.businessName)
-			log.Println("a.vat: ", a.vat)
-			log.Println("a.vat.entity: ", a.entity)
-			log.Println("a.vat.termsAccepted: ", a.termsAccepted)
-
 			if a.entity == "business" && a.termsAccepted {
 				a.beginRegistration(ctx)
 			}
@@ -275,6 +263,25 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 
 }
 
+func daysRemainingInMonth(date time.Time) int {
+	// Calculate the first day of the next month
+	firstDayOfNextMonth := time.Date(date.Year(), date.Month()+1, 1, 0, 0, 0, 0, date.Location())
+
+	// Subtract one day to get the last day of the current month
+	lastDayOfMonth := firstDayOfNextMonth.Add(-time.Hour * 24)
+
+	// Set the current date to midnight
+	midnightToday := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+
+	// Calculate the difference between the last day of the month and midnight today
+	diff := lastDayOfMonth.Sub(midnightToday)
+
+	// Convert the duration to days
+	days := int(diff.Hours()/24) + 1 // Add 1 to include today
+
+	return days
+}
+
 func (a *auth) fetchUsers(ctx app.Context) {
 	descriptors := [][]float32{}
 
@@ -303,7 +310,6 @@ func (a *auth) fetchUsers(ctx app.Context) {
 	)
 
 	days := daysRemainingInMonth(time.Now())
-	log.Println(days)
 	if days <= 3 {
 		a.getIncome(ctx)
 	}

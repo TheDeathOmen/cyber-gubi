@@ -57,11 +57,7 @@ func (w *wallet) OnMount(ctx app.Context) {
 
 	ctx.GetState("isBusiness", &w.isBusiness)
 
-	log.Println("w.isBusiness", w.isBusiness)
-
 	ctx.GetState("businessName", &w.businessName)
-
-	log.Println("w.businessName", w.businessName)
 
 	// w.updateIncome()
 	// w.deleteIncome()
@@ -73,25 +69,6 @@ func (w *wallet) OnMount(ctx app.Context) {
 	// return
 
 	w.getBalance(ctx)
-}
-
-func daysRemainingInMonth(date time.Time) int {
-	// Calculate the first day of the next month
-	firstDayOfNextMonth := time.Date(date.Year(), date.Month()+1, 1, 0, 0, 0, 0, date.Location())
-
-	// Subtract one day to get the last day of the current month
-	lastDayOfMonth := firstDayOfNextMonth.Add(-time.Hour * 24)
-
-	// Set the current date to midnight
-	midnightToday := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
-
-	// Calculate the difference between the last day of the month and midnight today
-	diff := lastDayOfMonth.Sub(midnightToday)
-
-	// Convert the duration to days
-	days := int(diff.Hours()/24) + 1 // Add 1 to include today
-
-	return days
 }
 
 func (w *wallet) deleteTransactions() {

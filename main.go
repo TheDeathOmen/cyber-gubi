@@ -33,6 +33,7 @@ func main() {
 	app.Route("/subscriptions", func() app.Composer { return &subscription{} })
 	// business only
 	app.Route("/plan", func() app.Composer { return &plan{} })
+	app.Route("/clients", func() app.Composer { return &client{} })
 	app.Route("/terms", func() app.Composer { return &terms{} })
 	app.Route("/privacy", func() app.Composer { return &privacy{} })
 	app.Route("/cookie", func() app.Composer { return &cookie{} })
@@ -111,6 +112,14 @@ func main() {
 	})
 
 	http.Handle("/plan", &app.Handler{
+		Name:        "Cyber GUBI",
+		Description: "An unconditional universal basic income",
+		Styles: []string{
+			"/web/app.css", // Loads app.css file.
+		},
+	})
+
+	http.Handle("/clients", &app.Handler{
 		Name:        "Cyber GUBI",
 		Description: "An unconditional universal basic income",
 		Styles: []string{
