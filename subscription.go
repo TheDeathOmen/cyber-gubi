@@ -13,7 +13,7 @@ import (
 
 const dbSubscription = "subscription"
 
-// payment is a component that holds cyber-gubi. A component is a
+// subscription is a component that holds cyber-gubi. A component is a
 // customizable, independent, and reusable UI element. It is created by
 // embedding app.Compo into a struct.
 type subscription struct {
@@ -276,7 +276,7 @@ func (s *subscription) doSubscribe(ctx app.Context, e app.Event) {
 }
 
 // The Render method is where the component appearance is defined. Here, a
-// payment form is displayed.
+// subscription form is displayed.
 func (s *subscription) Render() app.UI {
 	return app.Div().Class("container").Body(
 		app.Div().Class("mobile").Body(

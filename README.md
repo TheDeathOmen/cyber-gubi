@@ -120,9 +120,10 @@ go run main.go
 ## TODO
 
 - [x] Add Presentation Attack Detection model to prevent malicious attempts to abuse facial recognition
-- [ ] Introduce registration for businesses via waiting list
+- [x] Introduce registration for businesses via waiting list
+- [ ] Introduce governments as regulators - they have an admin panel to configure tax percentage, an open-source algorithm collects taxes automatically on each transaction. Governments have no control over the system and can only collect if they have an account
+- [ ] Update kubo to latest version
 - [ ] Port go-ipfs-api orbit-db integration to kubo/rpc
-- [ ] Final step - Introduce governments as regulators - they have an admin panel with settings, an open-source algorithm collects taxes automatically. Governments have no control over the system and can only collect if they have an account
 
 ## Acknowledgments
 
