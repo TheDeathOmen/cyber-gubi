@@ -69,6 +69,7 @@ func (w *wallet) OnMount(ctx app.Context) {
 	// w.deleteTransactions()
 	// w.deleteInflation()
 	// w.deletePlans()
+	// w.deleteSubscriptions()
 	// return
 
 	w.getBalance(ctx)
@@ -116,6 +117,13 @@ func (w *wallet) deleteBalances() {
 
 func (w *wallet) deletePlans() {
 	err := w.sh.OrbitDocsDelete(dbPlan, "all")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (w *wallet) deleteSubscriptions() {
+	err := w.sh.OrbitDocsDelete(dbSubscription, "all")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -303,27 +303,10 @@ func (a *auth) fetchUsers(ctx app.Context) {
 	)
 
 	days := daysRemainingInMonth(time.Now())
+	log.Println(days)
 	if days <= 3 {
 		a.getIncome(ctx)
 	}
-}
-
-func (a *auth) getUser(key, value string) User {
-	u, err := a.sh.OrbitDocsQueryEnc(dbUser, key, value)
-	if err != nil {
-		log.Println("Error querying for user:", err)
-		return User{}
-	}
-
-	// Directly unmarshal the byte slice into the User struct
-	users := []User{}
-	err = json.Unmarshal(u, &users) // Unmarshal the byte slice directly
-	if err != nil {
-		log.Println("Error unmarshaling user data:", err)
-		return User{}
-	}
-
-	return users[0]
 }
 
 func (a *auth) getMe() []*User {
