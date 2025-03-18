@@ -23,13 +23,23 @@ window.addEventListener('descriptorsFetched', (event) => {
     const jsonData = event.detail.descriptors;
     
     // Parse the JSON string into an object
-    const descriptor = JSON.parse(jsonData);
+    const parsedData = JSON.parse(jsonData);
+    
+    // Initialize an object to hold all reference descriptors
+    const referenceDescriptors = {};
 
-    // console.log(descriptor); // This will log an array of arrays
-    initializeFaceRecognition(descriptor);
+    // Iterate over each object in the parsed data
+    Object.keys(parsedData).forEach(key => {
+        // console.log(`Key: ${key}, Values: ${parsedData[key]}`);
+        // Extract values from the current object and store them in referenceDescriptors
+        referenceDescriptors[key] = parsedData[key];
+    });
+
+    console.log(referenceDescriptors); // This will log an array of arrays
+    initializeFaceRecognition(referenceDescriptors);
 });
 
-async function initializeFaceRecognition(descriptor) {
+async function initializeFaceRecognition(referenceDescriptors) {
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const registerButton = window.parent.document.getElementById('register-btn');
@@ -236,30 +246,41 @@ async function initializeFaceRecognition(descriptor) {
         // }
 
         if (detection.detection.score > confidenceThreshold && isRealFace) { // Check confidence
-            if (descriptor.length > 0 && !loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
-                    const distance = calculateDistance(descriptor, detection.descriptor);
+            if (!loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
+                Object.keys(referenceDescriptors).forEach(key => {
+                    // for (const refDescriptor of referenceDescriptors) {
+                        // console.log("refDescriptor: ", referenceDescriptors[key]);
+                        // console.log("detection.descriptor: ", detection.descriptor);
+                        const distance = calculateDistance(referenceDescriptors[key], detection.descriptor);
+                        if (distance < distanceThreshold) {
+                            // **CRITICAL: CLEAR INTERVAL FIRST**
+                            clearInterval(intervalId);
+                            console.log("Face recognition stopped after successful login.");
 
-                    if (distance < distanceThreshold) {
-                        // **CRITICAL: CLEAR INTERVAL FIRST**
-                        clearInterval(intervalId);
-                        console.log("Face recognition stopped after successful login.");
+                            loginSuccessful = true; // ADDED: Set loginSuccessful
 
-                        loginSuccessful = true; // ADDED: Set loginSuccessful
+                            drawBox.options.label = 'Matched face';
+                            drawBox.draw(canvas);
 
-                        drawBox.options.label = 'Matched face';
-                        drawBox.draw(canvas);
+                            const obj = {
+                                [key]: referenceDescriptors[key]
+                              };
 
-                        // Dispatch login event with the matched reference descriptor
-                        const loginEvent = new CustomEvent('click', {
-                            detail: {
-                                descriptor: JSON.stringify(descriptor), // Send only the matched descriptor
-                            }
-                        });
+                            // Dispatch login event with the matched reference descriptor
+                            const loginEvent = new CustomEvent('click', {
+                                detail: {
+                                    descriptor: JSON.stringify(obj), // Send only the matched descriptor
+                                }
+                            });
 
-                        loginButton.dispatchEvent(loginEvent);
+                            loginButton.dispatchEvent(loginEvent);
 
-                        console.log("Login event dispatched!", loginEvent.detail);
-                    }
+                            console.log("Login event dispatched!", loginEvent.detail);
+
+                            // break; // Exit the for...of loop
+                        }
+                    // }
+                })
             }
 
             // New face detected

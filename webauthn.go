@@ -38,6 +38,7 @@ type auth struct {
 	termsAccepted          bool
 	notificationPermission app.NotificationPermission
 	businessName           string
+	associateName          string
 	vat                    string
 }
 
@@ -61,7 +62,7 @@ type User struct {
 	Name          string                `mapstructure:"name" json:"name" validate:"uuid_rfc4122"`                     // Username or identifier for the user
 	DisplayName   string                `mapstructure:"display_name" json:"display_name" validate:"uuid_rfc4122"`     // Display name for the user
 	CredentialIDs []webauthn.Credential `mapstructure:"credential_ids" json:"credential_ids" validate:"uuid_rfc4122"` // List of credential IDs associated with the user
-	Descriptor    []float32             `mapstructure:"descriptor" json:"descriptor" validate:"uuid_rfc4122"`         // Face descriptor for the user
+	Descriptor    map[string][]float32  `mapstructure:"descriptor" json:"descriptor" validate:"uuid_rfc4122"`         // Face descriptor for the user
 	VAT           string                `mapstructure:"vat" json:"vat" validate:"uuid_rfc4122"`                       // VAT when company
 	Country       string                `mapstructure:"country" json:"country" validate:"uuid_rfc4122"`               // Country
 }
@@ -183,7 +184,7 @@ func (a *auth) OnMount(ctx app.Context) {
 		log.Fatal(err)
 	}
 
-	a.fetchUsers(ctx)
+	a.fetchUser(ctx)
 
 	ctx.ObserveState("entity", &a.entity)
 
@@ -198,7 +199,11 @@ func (a *auth) OnMount(ctx app.Context) {
 		OnChange(func() {
 			if a.entity == "business" && a.termsAccepted {
 				ctx.GetState("businessName", &a.businessName)
-				a.beginRegistration(ctx)
+				ctx.GetState("associateName", &a.associateName)
+				duplicatesFound := a.checkForDuplicates(ctx)
+				if !duplicatesFound {
+					a.beginRegistration(ctx)
+				}
 			}
 		})
 }
@@ -209,12 +214,13 @@ func (a *auth) findCountry(ctx app.Context) {
 		log.Fatal(err)
 	}
 
-	log.Println(myPeer.ID)
-
 	for _, addr := range myPeer.Addresses {
 		// Split the address to handle multiaddr format
 		ip, err := extractIP(addr)
 		if err != nil {
+			continue
+		}
+		if strings.Contains(ip, ":") {
 			continue
 		}
 		if isPublicIP(ip) {
@@ -238,11 +244,10 @@ func (a *auth) findCountry(ctx app.Context) {
 					log.Fatal(err)
 				}
 
-				log.Println(info["country"].(string))
-
 				// Storing HTTP response in component field:
 				ctx.Dispatch(func(ctx app.Context) {
 					a.country = info["country"].(string)
+					log.Println(a.country)
 				})
 			})
 		}
@@ -321,7 +326,6 @@ func (a *auth) doRegister(ctx app.Context, e app.Event) {
 
 func (a *auth) doLogin(ctx app.Context, e app.Event) {
 	descriptorJSON := e.Get("detail").Get("descriptor").String()
-
 	if len(descriptorJSON) == 0 {
 		log.Fatal("descriptorJSON is empty")
 	}
@@ -360,10 +364,10 @@ func daysRemainingInMonth(date time.Time) int {
 	return days
 }
 
-func (a *auth) fetchUsers(ctx app.Context) {
-	descriptor := []float32{}
+func (a *auth) fetchUser(ctx app.Context) {
+	descriptor := map[string][]float32{}
 	var descriptorJSON []byte
-	err := a.getMe()
+	err := a.getUser()
 	if err != nil {
 		descriptorJSON, err = json.Marshal(descriptor)
 	} else {
@@ -389,8 +393,8 @@ func (a *auth) fetchUsers(ctx app.Context) {
 	}
 }
 
-func (a *auth) getMe() error {
-	res, err := a.sh.OrbitDocsQueryEnc(dbUser, "me", "")
+func (a *auth) getUser() error {
+	res, err := a.sh.OrbitDocsQueryEnc(dbUser, "own", "")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -436,10 +440,18 @@ func (a *auth) deleteUsers() {
 
 func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 	ctx.Async(func() {
-		var descriptorBytes []float32
-		err := json.Unmarshal([]byte(a.descriptorJSON), &descriptorBytes)
+		var descriptor []float32
+		err := json.Unmarshal([]byte(a.descriptorJSON), &descriptor)
 		if err != nil {
 			log.Fatal(err)
+		}
+
+		descriptorMap := make(map[string][]float32)
+		if len(a.associateName) == 0 {
+			// pseudonymous for individuals
+			descriptorMap["user"] = descriptor
+		} else {
+			descriptorMap[a.associateName] = descriptor
 		}
 
 		user := User{
@@ -451,7 +463,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 					ID: []byte(credentialID),
 				},
 			},
-			Descriptor: descriptorBytes,
+			Descriptor: descriptorMap,
 			VAT:        a.vat,
 			Country:    a.country,
 		}
@@ -470,6 +482,52 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 			a.currentUser = user
 		})
 	})
+}
+
+func (a *auth) checkForDuplicates(ctx app.Context) bool {
+	res, err := a.sh.OrbitDocsQueryEnc(dbUser, "all", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	users := []map[string]interface{}{}
+
+	if len(res) != 0 {
+		err = json.Unmarshal([]byte(res), &users)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	duplicates := false
+
+	if len(users) > 0 {
+		for _, usrs := range users {
+			for k, v := range usrs {
+				if k == "name" || k == "display_name" {
+					if v == a.businessName {
+						ctx.Notifications().New(app.Notification{
+							Title: "Registration error",
+							Body:  "Business with this name already exists.",
+						})
+						duplicates = true
+						break
+					}
+				} else if k == "vat" {
+					if v == a.vat {
+						ctx.Notifications().New(app.Notification{
+							Title: "Registration error",
+							Body:  "Business with this VAT number already exists.",
+						})
+						duplicates = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return duplicates
 }
 
 func (a *auth) beginRegistration(ctx app.Context) {

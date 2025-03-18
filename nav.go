@@ -36,8 +36,8 @@ func (n *nav) OnMount(ctx app.Context) {
 
 	ctx.ObserveState("termsAccepted", &n.termsAccepted)
 	ctx.ObserveState("entity", &n.entity)
-	ctx.ObserveState("businessName", &n.businessName)
-	ctx.ObserveState("vat", &n.vat)
+	// ctx.ObserveState("businessName", &n.businessName)
+	// ctx.ObserveState("vat", &n.vat)
 	ctx.ObserveState("plan", &n.plan)
 }
 
@@ -93,9 +93,11 @@ func (n *nav) submitVAT(ctx app.Context, e app.Event) {
 	validBusinessName := app.Window().GetElementByID("business-name").Call("reportValidity").Bool()
 	if validVAT && validBusinessName {
 		businessName := app.Window().GetElementByID("business-name").Get("value").String()
+		associateName := app.Window().GetElementByID("associate-name").Get("value").String()
 		vat := app.Window().GetElementByID("vat-number").Get("value").String()
 		ctx.SetState("vat", vat)
 		ctx.SetState("businessName", businessName)
+		ctx.SetState("associateName", associateName)
 		app.Window().GetElementByID("main-menu").Call("click")
 	}
 }
@@ -204,7 +206,7 @@ func (n *nav) Render() app.UI {
 							)
 						})
 					}).Else(func() app.UI {
-						return app.If(n.entity == "business" && (len(n.vat) == 0 || len(n.businessName) == 0), func() app.UI {
+						return app.If(n.entity == "business", func() app.UI {
 							return app.Div().Class("menu-items").Body(
 								app.Div().Class("header-summary").Body(
 									app.Span().Class("logo").Text("cyber-gubi"),
@@ -214,6 +216,8 @@ func (n *nav) Render() app.UI {
 								),
 								app.Label().Class("menu-label").For("business-name").Text("Business Name:"),
 								app.Input().ID("business-name").Class("input-register").Type("text").Placeholder("Enter business name").MaxLength(22).Required(true),
+								app.Label().Class("menu-label").For("associate-name").Text("Associate Name:"),
+								app.Input().ID("associate-name").Class("input-register").Type("text").Placeholder("Enter associate name").MaxLength(22).Required(true),
 								app.Label().Class("menu-label").For("vat-number").Text("VAT Number:"),
 								app.Input().ID("vat-number").Class("input-register").Type("text").Placeholder("Enter VAT number").Required(true),
 								app.Div().Class("menu-btn").Body(
@@ -275,6 +279,9 @@ func (n *nav) Render() app.UI {
 									app.A().Href("/plan").Text("Edit Plan"),
 								)
 							}),
+							app.Li().Body(
+								app.A().Href("/associates").Text("Associates"),
+							),
 							app.Li().Body(
 								app.A().Href("/clients").Text("Clients"),
 							),
