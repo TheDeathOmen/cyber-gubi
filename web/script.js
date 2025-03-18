@@ -23,22 +23,13 @@ window.addEventListener('descriptorsFetched', (event) => {
     const jsonData = event.detail.descriptors;
     
     // Parse the JSON string into an object
-    const parsedData = JSON.parse(jsonData);
-    
-    // Initialize an array to hold all reference descriptors as arrays
-    const referenceDescriptors = [];
+    const descriptor = JSON.parse(jsonData);
 
-    // Iterate over each object in the parsed data
-    parsedData.forEach((descriptor) => {
-        // Extract values from the current object and push them to the referenceDescriptors array
-        referenceDescriptors.push(Object.values(descriptor));
-    });
-
-    console.log(referenceDescriptors); // This will log an array of arrays
-    initializeFaceRecognition(referenceDescriptors);
+    // console.log(descriptor); // This will log an array of arrays
+    initializeFaceRecognition(descriptor);
 });
 
-async function initializeFaceRecognition(referenceDescriptors) {
+async function initializeFaceRecognition(descriptor) {
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const registerButton = window.parent.document.getElementById('register-btn');
@@ -245,10 +236,8 @@ async function initializeFaceRecognition(referenceDescriptors) {
         // }
 
         if (detection.detection.score > confidenceThreshold && isRealFace) { // Check confidence
-            if (referenceDescriptors.length > 0 && !loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
-                // USE A FOR...OF LOOP
-                for (const refDescriptor of referenceDescriptors) {
-                    const distance = calculateDistance(refDescriptor, detection.descriptor);
+            if (descriptor.length > 0 && !loginSuccessful && challengeSuccess) { // ADDED challengeSuccess check
+                    const distance = calculateDistance(descriptor, detection.descriptor);
 
                     if (distance < distanceThreshold) {
                         // **CRITICAL: CLEAR INTERVAL FIRST**
@@ -263,17 +252,14 @@ async function initializeFaceRecognition(referenceDescriptors) {
                         // Dispatch login event with the matched reference descriptor
                         const loginEvent = new CustomEvent('click', {
                             detail: {
-                                descriptor: JSON.stringify(refDescriptor), // Send only the matched descriptor
+                                descriptor: JSON.stringify(descriptor), // Send only the matched descriptor
                             }
                         });
 
                         loginButton.dispatchEvent(loginEvent);
 
                         console.log("Login event dispatched!", loginEvent.detail);
-
-                        break; // Exit the for...of loop
                     }
-                }
             }
 
             // New face detected

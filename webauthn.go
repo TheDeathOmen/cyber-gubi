@@ -2,8 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
 	mathRand "math/rand"
+	"net"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -26,8 +31,9 @@ type auth struct {
 	sh                     *shell.Shell
 	webAuthn               *webauthn.WebAuthn
 	descriptorJSON         string
-	user                   *User
-	users                  []*User
+	currentUser            User
+	users                  []User
+	country                string
 	entity                 string
 	termsAccepted          bool
 	notificationPermission app.NotificationPermission
@@ -57,6 +63,7 @@ type User struct {
 	CredentialIDs []webauthn.Credential `mapstructure:"credential_ids" json:"credential_ids" validate:"uuid_rfc4122"` // List of credential IDs associated with the user
 	Descriptor    []float32             `mapstructure:"descriptor" json:"descriptor" validate:"uuid_rfc4122"`         // Face descriptor for the user
 	VAT           string                `mapstructure:"vat" json:"vat" validate:"uuid_rfc4122"`                       // VAT when company
+	Country       string                `mapstructure:"country" json:"country" validate:"uuid_rfc4122"`               // Country
 }
 
 // Define your own struct that matches the CredentialCreation structure
@@ -155,15 +162,18 @@ func (a *auth) OnMount(ctx app.Context) {
 	sh := shell.NewShell("localhost:5001")
 	a.sh = sh
 
+	a.findCountry(ctx)
+
 	// a.deleteUsers()
 	// return
 
-	var err error
 	wconfig := &webauthn.Config{
 		RPDisplayName: "cyber-gubi",                      // Display Name for your site
 		RPID:          "localhost",                       // Generally the FQDN for your site
 		RPOrigins:     []string{"http://localhost:8000"}, // Allowed origins for WebAuthn requests
 	}
+
+	var err error
 
 	if a.webAuthn, err = webauthn.New(wconfig); err != nil {
 		ctx.Notifications().New(app.Notification{
@@ -187,9 +197,80 @@ func (a *auth) OnMount(ctx app.Context) {
 	ctx.ObserveState("vat", &a.vat).
 		OnChange(func() {
 			if a.entity == "business" && a.termsAccepted {
+				ctx.GetState("businessName", &a.businessName)
 				a.beginRegistration(ctx)
 			}
 		})
+}
+
+func (a *auth) findCountry(ctx app.Context) {
+	myPeer, err := a.sh.ID()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println(myPeer.ID)
+
+	for _, addr := range myPeer.Addresses {
+		// Split the address to handle multiaddr format
+		ip, err := extractIP(addr)
+		if err != nil {
+			continue
+		}
+		if isPublicIP(ip) {
+			fmt.Println("Potential public IP:", ip)
+			ctx.Async(func() {
+				r, err := http.Get("https://api.country.is/" + ip)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer r.Body.Close()
+
+				b, err := ioutil.ReadAll(r.Body)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				var info map[string]interface{}
+
+				err = json.Unmarshal(b, &info)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				log.Println(info["country"].(string))
+
+				// Storing HTTP response in component field:
+				ctx.Dispatch(func(ctx app.Context) {
+					a.country = info["country"].(string)
+				})
+			})
+		}
+	}
+}
+
+func isPublicIP(ip string) bool {
+	ipAddr := net.ParseIP(ip)
+	if ipAddr != nil {
+		// Check if the IP is not a private or loopback address
+		if ipAddr.IsPrivate() || ipAddr.IsLoopback() {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+func extractIP(addr string) (string, error) {
+	// Simple function to extract IP from multiaddr format
+	// This might need adjustments based on the actual format of addr
+	parts := strings.Split(addr, "/")
+	for _, part := range parts {
+		if net.ParseIP(part) != nil {
+			return part, nil
+		}
+	}
+	return "", fmt.Errorf("no IP found in address")
 }
 
 func (a *auth) getIncome(ctx app.Context) {
@@ -245,22 +326,19 @@ func (a *auth) doLogin(ctx app.Context, e app.Event) {
 		log.Fatal("descriptorJSON is empty")
 	}
 
-	for _, user := range a.users {
-		desc, err := json.Marshal(user.Descriptor)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if string(desc) == descriptorJSON {
-			ctx.SetState("userID", string(user.ID))
-			if len(user.VAT) > 0 {
-				ctx.SetState("isBusiness", true)
-				ctx.SetState("businessName", user.Name)
-			}
-			a.beginLogin(ctx, string(user.CredentialIDs[0].ID))
-		}
+	desc, err := json.Marshal(a.currentUser.Descriptor)
+	if err != nil {
+		log.Fatal(err)
 	}
 
+	if string(desc) == descriptorJSON {
+		ctx.SetState("userID", string(a.currentUser.ID))
+		if len(a.currentUser.VAT) > 0 {
+			ctx.SetState("isBusiness", true)
+			ctx.SetState("businessName", a.currentUser.Name)
+		}
+		a.beginLogin(ctx, string(a.currentUser.CredentialIDs[0].ID))
+	}
 }
 
 func daysRemainingInMonth(date time.Time) int {
@@ -283,19 +361,15 @@ func daysRemainingInMonth(date time.Time) int {
 }
 
 func (a *auth) fetchUsers(ctx app.Context) {
-	descriptors := [][]float32{}
-
-	users := a.getMe()
-
-	a.users = users
-
-	if len(users) > 0 {
-		for _, user := range users {
-			descriptors = append(descriptors, user.Descriptor)
-		}
+	descriptor := []float32{}
+	var descriptorJSON []byte
+	err := a.getMe()
+	if err != nil {
+		descriptorJSON, err = json.Marshal(descriptor)
+	} else {
+		descriptorJSON, err = json.Marshal(a.currentUser.Descriptor)
 	}
 
-	descriptorsJSON, err := json.Marshal(descriptors)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -304,7 +378,7 @@ func (a *auth) fetchUsers(ctx app.Context) {
 	app.Window().Get("parent").Get("window").Call("dispatchEvent", // Target the iframe's window
 		app.Window().Get("CustomEvent").New("descriptorsFetched", map[string]interface{}{
 			"detail": map[string]interface{}{
-				"descriptors": string(descriptorsJSON),
+				"descriptors": string(descriptorJSON),
 			},
 		}),
 	)
@@ -315,7 +389,7 @@ func (a *auth) fetchUsers(ctx app.Context) {
 	}
 }
 
-func (a *auth) getMe() []*User {
+func (a *auth) getMe() error {
 	res, err := a.sh.OrbitDocsQueryEnc(dbUser, "me", "")
 	if err != nil {
 		log.Fatal(err)
@@ -337,18 +411,20 @@ func (a *auth) getMe() []*User {
 
 	res7 := strings.ReplaceAll(res6, `}"`, `}`)
 
-	users := []*User{}
+	users := []User{}
 
 	if len(res) == 0 {
-		return users
+		return errors.New("no user found")
 	}
 
 	err = json.Unmarshal([]byte(res7), &users)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	return users
+	a.currentUser = users[0]
+
+	return nil
 }
 
 func (a *auth) deleteUsers() {
@@ -366,9 +442,10 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 			log.Fatal(err)
 		}
 
-		user := &User{
-			Name: a.businessName,
-			ID:   protocol.URLEncodedBase64(userID),
+		user := User{
+			Name:        a.businessName,
+			DisplayName: a.businessName,
+			ID:          protocol.URLEncodedBase64(userID),
 			CredentialIDs: []webauthn.Credential{
 				{
 					ID: []byte(credentialID),
@@ -376,6 +453,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 			},
 			Descriptor: descriptorBytes,
 			VAT:        a.vat,
+			Country:    a.country,
 		}
 
 		userJSON, err := json.Marshal(user)
@@ -389,7 +467,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 		}
 
 		ctx.Dispatch(func(ctx app.Context) {
-			a.user = user
+			a.currentUser = user
 		})
 	})
 }
@@ -405,6 +483,11 @@ func (a *auth) beginRegistration(ctx app.Context) {
 
 	us := User{
 		ID: []byte(userID),
+	}
+
+	if len(a.businessName) > 0 {
+		us.Name = a.businessName
+		us.DisplayName = a.businessName
 	}
 
 	rp := app.ValueOf(map[string]interface{}{
@@ -474,7 +557,6 @@ func (a *auth) beginRegistration(ctx app.Context) {
 			ctx.SetState("userID", userID)
 			if len(a.vat) > 0 {
 				ctx.SetState("isBusiness", true)
-				ctx.SetState("businessName", a.businessName)
 			}
 			a.beginLogin(ctx, credentialID)
 		} else {
