@@ -101,15 +101,15 @@ func (c *client) Render() app.UI {
 						),
 					),
 				),
-				app.Div().Class("subscriptions").Body(
+				app.Div().Class("subscriptions c-sub").Body(
 					app.Span().Class("s-desc").Text("Recent Subscriptions"),
-					app.If(c.plan == Plan{} || len(c.subscriptions) == 0, func() app.UI {
+					app.If(len(c.subscriptions) == 0, func() app.UI {
 						return app.Div().Class("subscription").Body(
 							app.Span().Class("empty").Text("No subscriptions yet"),
 						).Style("pointer-events", "none")
 					}),
 					app.Range(c.subscriptions).Slice(func(i int) app.UI {
-						return app.Div().Class("subscription c-sub").Body(
+						return app.Div().Class("subscription").Body(
 							app.Div().Class("s-details").Body(
 								app.Div().Class("c-title").Body(
 									app.Span().Text("User ID: "+c.subscriptions[i].UserID),
@@ -120,7 +120,7 @@ func (c *client) Render() app.UI {
 								),
 							),
 							app.Div().Class("s-price").Body(
-								app.Span().Text(strconv.Itoa(c.plan.Price/100)+" GUBI"),
+								app.Span().Text(strconv.Itoa(c.subscriptions[i].Price/100)+" GUBI"),
 							),
 						)
 					}),

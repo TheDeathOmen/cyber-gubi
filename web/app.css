@@ -143,7 +143,13 @@ iframe {
 .upper-row {
   display: flex;
   justify-content: space-evenly;
-  padding: 25px;
+  /* padding: 25px; */
+  margin-top: 25px;
+}
+
+.single {
+  margin: 0!important;
+  padding: 25px!important;
 }
 
 .card-item {
@@ -154,7 +160,7 @@ iframe {
 
 .card-terms {
   height: 500px;
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 .card-auth .card-item {
@@ -205,7 +211,7 @@ iframe {
 .lower-row {
   display: flex;
   justify-content: space-evenly;
-  padding-bottom: 25px;
+  padding: 25px 0;
   /* margin-bottom: 25px; */
 }
 
@@ -265,11 +271,22 @@ iframe {
   overflow-y: auto;
 }
 
+.associates {
+  font-family: 'Montserrat', sans-serif;
+  display: flex;
+  position: relative;
+  margin: 2rem 0;
+  padding-top: 10px;
+  flex-direction: column;
+  height: 290px;
+  overflow-y: auto;
+}
+
 .c-sub {
   height: 300px!important;
 }
 
-.t-desc, .s-desc {
+.t-desc, .s-desc, .a-desc {
   color: darkblue;
   font-size: 1rem;
   font-weight: bold;
@@ -305,10 +322,28 @@ iframe {
   margin-bottom: 10px;
 }
 
-.t-details {
+.associate {
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color:white;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.02), 0 10px 10px rgba(0,0,0,0.0);
+  border: 1px solid lightseagreen;
+  border-radius: 50px;
+  font-weight: 500;
+  color: darkblue;
+  margin-bottom: 10px;
+}
+
+.t-details, .a-details {
   width: 85%;
   height: 55px;
   overflow: hidden;
+}
+
+.a-details {
+  height: auto;
 }
 
 /* .s-details {
@@ -321,7 +356,7 @@ iframe {
   font-size: 0.8rem;
 }
 
-.t-price {
+.t-price, .a-price {
   text-align: center;
 }
 
@@ -358,7 +393,12 @@ iframe {
   padding-bottom: 5px;
 }
 
-.t-time {
+.a-title {
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.t-time, .a-time {
   font-size: 0.6rem;
   opacity: 0.6;
   font-weight: 300;
@@ -457,7 +497,13 @@ iframe {
   left: -30px;
 }
 
+.menu-assoc {
+  scale: 0.6;
+  position: relative;
+}
+
 .menu-add-item {
+  margin-top: 25px;
   width: 100px!important;
 }
 
@@ -534,20 +580,23 @@ input {
   padding-right: 25px; */
 
   label {
-    top: -10px;
     position: relative;
     font-weight: bold;
+    font-size: 0.8rem;
+    padding-right: 20px;
   }
 
   select {
     padding: 10px;
     border: 1px solid lightseagreen;
     border-radius: 20px;
+    width: 100px;
   }
 }
 
 .tabs {
   margin-top: 25px;
+  margin-bottom: 10px;
 }
 
 button {
@@ -563,9 +612,9 @@ button {
 }
 
 .tab-content {
-  margin-top: 15px;
-  overflow-y: scroll;
-  max-height: 170px;
+  /* margin-top: 15px; */
+  overflow-y: auto;
+  max-height: 180px;
 }
 
 .tab-active {

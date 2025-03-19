@@ -300,7 +300,7 @@ func (s *supplier) Render() app.UI {
 			),
 			app.Div().ID("content").Body(
 				app.Div().Class("card").Body(
-					app.Div().Class("upper-row").Body(
+					app.Div().Class("upper-row single").Body(
 						app.Div().Class("card-item").Body(
 							app.Span().Class("span-header-sub").Text("Suppliers"),
 						),

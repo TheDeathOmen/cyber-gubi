@@ -32,13 +32,13 @@ type auth struct {
 	webAuthn               *webauthn.WebAuthn
 	descriptorJSON         string
 	currentUser            User
-	users                  []User
 	country                string
 	entity                 string
 	termsAccepted          bool
 	notificationPermission app.NotificationPermission
 	businessName           string
 	associateName          string
+	newAssociateName       string
 	vat                    string
 }
 
@@ -321,27 +321,38 @@ func NewUser() (*User, error) {
 
 func (a *auth) doRegister(ctx app.Context, e app.Event) {
 	a.descriptorJSON = e.Get("detail").Get("descriptor").String()
-	app.Window().GetElementByID("main-menu").Call("click")
+	ctx.GetState("newAssociateName", &a.newAssociateName)
+
+	if len(a.newAssociateName) > 0 {
+		a.updateUser(ctx)
+	} else {
+		app.Window().GetElementByID("main-menu").Call("click")
+	}
 }
 
 func (a *auth) doLogin(ctx app.Context, e app.Event) {
-	descriptorJSON := e.Get("detail").Get("descriptor").String()
-	if len(descriptorJSON) == 0 {
+	a.descriptorJSON = e.Get("detail").Get("descriptor").String()
+	if len(a.descriptorJSON) == 0 {
 		log.Fatal("descriptorJSON is empty")
 	}
 
-	desc, err := json.Marshal(a.currentUser.Descriptor)
+	var descriptor map[string][]float32
+
+	err := json.Unmarshal([]byte(a.descriptorJSON), &descriptor)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if string(desc) == descriptorJSON {
-		ctx.SetState("userID", string(a.currentUser.ID))
-		if len(a.currentUser.VAT) > 0 {
-			ctx.SetState("isBusiness", true)
-			ctx.SetState("businessName", a.currentUser.Name)
+	for name := range descriptor {
+		if len(a.currentUser.Descriptor[name]) > 0 {
+			ctx.SetState("userID", string(a.currentUser.ID))
+			if len(a.currentUser.VAT) > 0 {
+				ctx.SetState("isBusiness", true)
+				ctx.SetState("businessName", a.currentUser.Name)
+				ctx.SetState("associateName", name)
+			}
+			a.beginLogin(ctx, string(a.currentUser.CredentialIDs[0].ID))
 		}
-		a.beginLogin(ctx, string(a.currentUser.CredentialIDs[0].ID))
 	}
 }
 
@@ -367,7 +378,7 @@ func daysRemainingInMonth(date time.Time) int {
 func (a *auth) fetchUser(ctx app.Context) {
 	descriptor := map[string][]float32{}
 	var descriptorJSON []byte
-	err := a.getUser()
+	err := a.getUser(ctx)
 	if err != nil {
 		descriptorJSON, err = json.Marshal(descriptor)
 	} else {
@@ -393,7 +404,7 @@ func (a *auth) fetchUser(ctx app.Context) {
 	}
 }
 
-func (a *auth) getUser() error {
+func (a *auth) getUser(ctx app.Context) error {
 	res, err := a.sh.OrbitDocsQueryEnc(dbUser, "own", "")
 	if err != nil {
 		log.Fatal(err)
@@ -427,6 +438,7 @@ func (a *auth) getUser() error {
 	}
 
 	a.currentUser = users[0]
+	ctx.SetState("currentUser", a.currentUser)
 
 	return nil
 }
@@ -452,6 +464,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 			descriptorMap["user"] = descriptor
 		} else {
 			descriptorMap[a.associateName] = descriptor
+			ctx.SetState("associateName", &a.associateName)
 		}
 
 		user := User{
@@ -480,6 +493,36 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 
 		ctx.Dispatch(func(ctx app.Context) {
 			a.currentUser = user
+		})
+	})
+}
+
+func (a *auth) updateUser(ctx app.Context) {
+	ctx.Async(func() {
+		var descriptor []float32
+		err := json.Unmarshal([]byte(a.descriptorJSON), &descriptor)
+		if err != nil {
+			log.Fatal(err)
+		}
+		a.currentUser.Descriptor[a.newAssociateName] = descriptor
+
+		userJSON, err := json.Marshal(a.currentUser)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = a.sh.OrbitDocsPutEnc(dbUser, userJSON)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		ctx.Dispatch(func(ctx app.Context) {
+			ctx.DelState("newAssociateName")
+			ctx.Notifications().New(app.Notification{
+				Title: "Success",
+				Body:  "You have added associate " + a.newAssociateName + ". Any of you can log in now.",
+			})
+			ctx.Reload()
 		})
 	})
 }
@@ -608,7 +651,6 @@ func (a *auth) beginRegistration(ctx app.Context) {
 	promise.Call("then", app.FuncOf(func(this app.Value, args []app.Value) interface{} {
 		if len(args) > 0 {
 			cred := args[0] // The PublicKeyCredential object
-
 			// Get the credentialId
 			credentialID := cred.Get("id").String()
 			a.createUser(ctx, userID, credentialID)

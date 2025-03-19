@@ -33,7 +33,7 @@ func main() {
 	app.Route("/subscriptions", func() app.Composer { return &subscription{} })
 	// business only
 	app.Route("/plan", func() app.Composer { return &plan{} })
-	// app.Route("/associates", func() app.Composer { return &associate{} })
+	app.Route("/associates", func() app.Composer { return &associate{} })
 	app.Route("/clients", func() app.Composer { return &client{} })
 	app.Route("/suppliers", func() app.Composer { return &supplier{} })
 	app.Route("/terms", func() app.Composer { return &terms{} })

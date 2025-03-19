@@ -72,14 +72,14 @@ async function initializeFaceRecognition(referenceDescriptors) {
 
     if (!(video instanceof HTMLVideoElement)) {
         console.error("Error: 'video' is NOT an HTMLVideoElement.", video);
-        alert("Critical Error:  Video element is not valid. See console.");  // Make it obvious
+        // alert("Critical Error:  Video element is not valid. See console.");  // Make it obvious
         location.reload();
         return; // Stop initialization
     }
 
     if (!video.srcObject) {
         console.error("Error: 'video' element has no srcObject (no stream).", video);
-        alert("Critical Error: Video stream not connected. See console.");
+        // alert("Critical Error: Video stream not connected. See console.");
         location.reload();
         return;
     }
