@@ -20,8 +20,11 @@ type payment struct {
 	app.Compo
 	sh            *shell.Shell
 	loggedIn      bool
+	isBusiness    bool
 	userID        string
 	userBalance   UserBalance
+	country       string
+	region        string
 	userBalances  []UserBalance
 	productsIndex []int
 	servicesIndex []int
@@ -57,6 +60,22 @@ type ProductService struct {
 	Amount int    `mapstructure:"amount" json:"amount" validate:"uuid_rfc4122"`
 }
 
+// Struct for individual state data
+type State struct {
+	Rate float64 `json:"rate"`
+	Type string  `json:"type"`
+}
+
+// Struct for country data, including nested states
+type Country struct {
+	Type   string           `json:"type"`
+	Rate   float64          `json:"rate"`
+	States map[string]State `json:"states,omitempty"` // Use a map for dynamic state keys
+}
+
+// Top-level struct to hold country data
+type TaxData map[string]Country
+
 func (p *payment) OnMount(ctx app.Context) {
 	sh := shell.NewShell("localhost:5001")
 	p.sh = sh
@@ -76,6 +95,12 @@ func (p *payment) OnMount(ctx app.Context) {
 
 	ctx.GetState("userID", &p.userID)
 	ctx.GetState("balance", &p.userBalance)
+	ctx.GetState("country: ", &p.country)
+	ctx.GetState("region: ", &p.region)
+	ctx.GetState("isBusiness: ", &p.isBusiness)
+
+	log.Println("p.isBusiness", p.isBusiness)
+
 	p.getBalances(ctx)
 }
 
@@ -97,6 +122,26 @@ func (p *payment) getBalance(userID string) (balance UserBalance, err error) {
 	}
 
 	return userBalances[0], nil
+}
+
+func (p *payment) getUser(userID string) (user User, err error) {
+	b, err := p.sh.OrbitDocsQuery(dbUser, "_id", userID)
+	if err != nil {
+		return User{}, err
+	}
+
+	if len(b) == 0 {
+		return User{}, err
+	}
+
+	u := []User{}
+
+	err = json.Unmarshal(b, &u) // Unmarshal the byte slice directly
+	if err != nil {
+		return User{}, err
+	}
+
+	return u[0], nil
 }
 
 func removeSelfFromUserResults(userBalances []UserBalance, userID string) []UserBalance {
@@ -259,6 +304,55 @@ func (p *payment) doPayment(ctx app.Context, e app.Event) {
 
 		for _, ps := range transaction.ProductsServices {
 			totalCost += ps.Price * ps.Amount
+		}
+
+		if p.isBusiness {
+			data := getSalesTaxJSON()
+
+			// Unmarshal the JSON data into the struct
+			var obj TaxData
+			err := json.Unmarshal([]byte(data), &obj)
+			if err != nil {
+				log.Fatal("Error unmarshaling JSON:", err)
+			}
+
+			// add local tax to total cost
+
+			// deduct total cost from buyer
+
+			// get country and if necessary region of buyer
+			// get country and if necessary region of seller
+			user, err := p.getUser(receiverID)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			var tax int
+			var totalCostPlusTax int
+
+			log.Println("user.Country: ", user.Country)
+			log.Println("p.country: ", p.country)
+
+			if user.Country == p.country {
+				for countryCode, taxCountry := range obj {
+					if countryCode == user.Country {
+						if countryCode != "US" && countryCode != "CA" && countryCode != "ES" {
+							tax = totalCost * int(taxCountry.Rate)
+							log.Println("tax: ", tax)
+							totalCostPlusTax = totalCost + tax
+							log.Println("totalCostPlusTax: ", totalCostPlusTax)
+						}
+					}
+				}
+			}
+
+			return
+
+			// if countries match debit seller totalCoast
+
+			// if countries don't match debit seller totalCost - tax
+
+			// debit tax to country wallet
 		}
 
 		transaction.TotalCost = totalCost

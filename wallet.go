@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"sort"
 	"strconv"
 	"time"
@@ -15,6 +17,7 @@ import (
 const dbIncome = "income"
 const dbUserBalance = "user_balance"
 const dbInflation = "inflation"
+const dbCountryWallet = "country_wallet"
 
 // wallet is a component that holds cyber-gubi. A component is a
 // customizable, independent, and reusable UI element. It is created by
@@ -44,6 +47,13 @@ type Income struct {
 	Period string `mapstructure:"period" json:"period" validate:"uuid_rfc4122"` // Period the income is valid for
 }
 
+type CountryWallet struct {
+	ID          string  `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`                   // Unique identifier for the wallet
+	CountryCode string  `mapstructure:"country_code" json:"country_code" validate:"uuid_rfc4122"` // Unique identifier for the country
+	Amount      int     `mapstructure:"amount" json:"amount" validate:"uuid_rfc4122"`             // Amount of the wallet in cents
+	TaxRate     float64 `mapstructure:"tax_rate" json:"tax_rate" validate:"uuid_rfc4122"`         // Tax rate set up by authorities
+}
+
 func (w *wallet) OnMount(ctx app.Context) {
 	sh := shell.NewShell("localhost:5001")
 	w.sh = sh
@@ -66,9 +76,78 @@ func (w *wallet) OnMount(ctx app.Context) {
 	// w.deleteInflation()
 	// w.deletePlans()
 	// w.deleteSubscriptions()
+	// w.createCountryWallets(ctx)
+	// w.getCountryWallets(ctx)
 	// return
 
 	w.getBalance(ctx)
+}
+
+func (w *wallet) getCountryWallets(ctx app.Context) {
+	ctx.Async(func() {
+		p, err := w.sh.OrbitDocsQuery(dbCountryWallet, "all", "")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		wallets := []CountryWallet{}
+
+		if len(p) != 0 {
+			err = json.Unmarshal(p, &wallets) // Unmarshal the byte slice directly
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		log.Println(wallets)
+	})
+}
+
+func (w *wallet) createCountryWallets(ctx app.Context) {
+	ctx.Async(func() {
+		r, err := http.Get("https://restcountries.com/v3.1/all?fields=cca2")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer r.Body.Close()
+
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var countryCodes []map[string]string
+
+		err = json.Unmarshal(b, &countryCodes)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, country := range countryCodes {
+			for _, code := range country {
+				countryWallet := &CountryWallet{
+					ID:          uuid.NewString(),
+					CountryCode: code,
+					Amount:      0,
+					TaxRate:     0,
+				}
+
+				countryWalletJSON, err := json.Marshal(countryWallet)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = w.sh.OrbitDocsPut(dbCountryWallet, countryWalletJSON)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+
+		ctx.Dispatch(func(ctx app.Context) {
+		})
+	})
 }
 
 func (w *wallet) deleteTransactions() {

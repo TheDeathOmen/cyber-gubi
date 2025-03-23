@@ -33,6 +33,7 @@ type auth struct {
 	descriptorJSON         string
 	currentUser            User
 	country                string
+	region                 string
 	entity                 string
 	termsAccepted          bool
 	notificationPermission app.NotificationPermission
@@ -64,7 +65,8 @@ type User struct {
 	CredentialIDs []webauthn.Credential `mapstructure:"credential_ids" json:"credential_ids" validate:"uuid_rfc4122"` // List of credential IDs associated with the user
 	Descriptor    map[string][]float32  `mapstructure:"descriptor" json:"descriptor" validate:"uuid_rfc4122"`         // Face descriptor for the user
 	VAT           string                `mapstructure:"vat" json:"vat" validate:"uuid_rfc4122"`                       // VAT when company
-	Country       string                `mapstructure:"country" json:"country" validate:"uuid_rfc4122"`               // Country
+	Country       string                `mapstructure:"country" json:"country" validate:"uuid_rfc4122"`
+	Region        string                `mapstructure:"region" json:"region" validate:"uuid_rfc4122"` // Country
 }
 
 // Define your own struct that matches the CredentialCreation structure
@@ -226,7 +228,7 @@ func (a *auth) findCountry(ctx app.Context) {
 		if isPublicIP(ip) {
 			fmt.Println("Potential public IP:", ip)
 			ctx.Async(func() {
-				r, err := http.Get("https://api.country.is/" + ip)
+				r, err := http.Get("http://ip-api.com/json/" + ip + "?fields=countryCode,region")
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -246,8 +248,11 @@ func (a *auth) findCountry(ctx app.Context) {
 
 				// Storing HTTP response in component field:
 				ctx.Dispatch(func(ctx app.Context) {
-					a.country = info["country"].(string)
-					log.Println(a.country)
+					a.country = info["countryCode"].(string)
+					ctx.SetState("country: ", a.country)
+
+					a.region = info["region"].(string)
+					ctx.SetState("region: ", a.region)
 				})
 			})
 		}
@@ -326,7 +331,15 @@ func (a *auth) doRegister(ctx app.Context, e app.Event) {
 	if len(a.newAssociateName) > 0 {
 		a.updateUser(ctx)
 	} else {
-		app.Window().GetElementByID("main-menu").Call("click")
+		err := a.getUser(ctx)
+		if err != nil {
+			app.Window().GetElementByID("main-menu").Call("click")
+		} else {
+			ctx.Notifications().New(app.Notification{
+				Title: "Error",
+				Body:  "You can not register another person on this device with the same private keys. Clone https://github.com/stateless-minds/cyber-gubi-local and run it for the new registration.",
+			})
+		}
 	}
 }
 
@@ -380,6 +393,7 @@ func (a *auth) fetchUser(ctx app.Context) {
 	var descriptorJSON []byte
 	err := a.getUser(ctx)
 	if err != nil {
+		log.Println(err)
 		descriptorJSON, err = json.Marshal(descriptor)
 	} else {
 		descriptorJSON, err = json.Marshal(a.currentUser.Descriptor)
@@ -411,7 +425,6 @@ func (a *auth) getUser(ctx app.Context) error {
 	}
 
 	// sanitize json
-
 	res1 := strings.ReplaceAll(string(res), "\\", "")
 
 	res2 := strings.ReplaceAll(res1, `""`, `"`)
@@ -479,6 +492,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 			Descriptor: descriptorMap,
 			VAT:        a.vat,
 			Country:    a.country,
+			Region:     a.region,
 		}
 
 		userJSON, err := json.Marshal(user)

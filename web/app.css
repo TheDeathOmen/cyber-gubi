@@ -147,6 +147,11 @@ iframe {
   margin-top: 25px;
 }
 
+.upper-row-sub {
+  margin: 0;
+  padding: 25px;
+}
+
 .single {
   margin: 0!important;
   padding: 25px!important;
