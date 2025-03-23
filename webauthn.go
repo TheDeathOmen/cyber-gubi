@@ -331,14 +331,15 @@ func (a *auth) doRegister(ctx app.Context, e app.Event) {
 	if len(a.newAssociateName) > 0 {
 		a.updateUser(ctx)
 	} else {
-		err := a.getUser(ctx)
+		err := a.sh.CheckKeys()
 		if err != nil {
-			app.Window().GetElementByID("main-menu").Call("click")
-		} else {
+			log.Println(err)
 			ctx.Notifications().New(app.Notification{
 				Title: "Error",
-				Body:  "You can not register another person on this device with the same private keys. Clone https://github.com/stateless-minds/cyber-gubi-local and run it for the new registration.",
+				Body:  "You can not register another user on this device.",
 			})
+		} else {
+			app.Window().GetElementByID("main-menu").Call("click")
 		}
 	}
 }
