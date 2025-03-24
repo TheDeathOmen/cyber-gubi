@@ -1,5 +1,7 @@
 # cyber-gubi - Guaranteed unconditional basic income digital currency
 
+WIP - not ready for production use, all databases will be recreated upon launch
+
 ## Screenshots
 
 <a display="inline" href="./assets/authentication.png?raw=true">
@@ -66,12 +68,12 @@ git clone https://github.com/stateless-minds/cyber-gubi-local.git
   },
  ```
 6. Set a password, unzip the binary and run the daemon:
-``` 
-export ENC_PASSWORD=your_password_here
-unzip ipfs.zip
-go run main.go
-./ipfs daemon --enable-pubsub-experiment
-```
+
++ `export ENC_PASSWORD=your_password_here`
++ `unzip ipfs.zip`
++ `./ipfs daemon --enable-pubsub-experiment`
++ `./main`
+
 7.  Navigate to <a href="https://ipfs.io/ipns/k51qzi5uqu5djkqrrcswqzxsdg3r9fxtzatjac00a2txm7woss7s78s0qihxgr">Cyber Gubi</a>
 8.  Pin it to your local node so that you become a permanent host of it while you have IPFS daemon running
 ![SetPinning](./assets/pin.png)

@@ -339,22 +339,22 @@ func (a *auth) doRegister(ctx app.Context, e app.Event) {
 	if len(a.newAssociateName) > 0 {
 		a.updateUser(ctx)
 	} else {
-		exists, err := a.alreadyRegistered()
-		if err != nil {
-			log.Println(err)
-			ctx.Notifications().New(app.Notification{
-				Title: "Error",
-				Body:  "Re-run the setup from https://github.com/stateless-minds/cyber-gubi-local and try again.",
-			})
-		}
-		if exists {
-			ctx.Notifications().New(app.Notification{
-				Title: "Error",
-				Body:  "You can not register more than one user on this device.",
-			})
-		} else {
-			app.Window().GetElementByID("main-menu").Call("click")
-		}
+		// exists, err := a.alreadyRegistered()
+		// if err != nil {
+		// 	log.Println(err)
+		// 	ctx.Notifications().New(app.Notification{
+		// 		Title: "Error",
+		// 		Body:  "Re-run the setup from https://github.com/stateless-minds/cyber-gubi-local and try again.",
+		// 	})
+		// }
+		// if exists {
+		// 	ctx.Notifications().New(app.Notification{
+		// 		Title: "Error",
+		// 		Body:  "You can not register more than one user on this device.",
+		// 	})
+		// } else {
+		app.Window().GetElementByID("main-menu").Call("click")
+		// }
 	}
 }
 
