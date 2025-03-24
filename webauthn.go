@@ -22,6 +22,7 @@ import (
 )
 
 const dbUser = "user"
+const dbUserDevice = "user_device"
 
 // auth is a component that uses webauthn and biometrics. A component is a
 // customizable, independent, and reusable UI element. It is created by
@@ -31,6 +32,7 @@ type auth struct {
 	sh                     *shell.Shell
 	webAuthn               *webauthn.WebAuthn
 	descriptorJSON         string
+	userDevice             UserDevice
 	currentUser            User
 	country                string
 	region                 string
@@ -56,6 +58,12 @@ type Authenticator struct {
 	Attachment   string `mapstructure:"attachment" json:"attachment"`
 	CloneWarning bool   `mapstructure:"cloneWarning" json:"clone_warning"`
 	SignCount    int    `mapstructure:"signCount" json:"sign_count"`
+}
+
+type UserDevice struct {
+	ID         string `mapstructure:"_id" json:"_id" validate:"uuid_rfc4122"`               // Unique identifier for device
+	Address    string `mapstructure:"address" json:"address" validate:"uuid_rfc4122"`       // Key for device
+	Registered bool   `mapstructure:"registered" json:"registered" validate:"uuid_rfc4122"` // Check if registered
 }
 
 type User struct {
@@ -331,12 +339,18 @@ func (a *auth) doRegister(ctx app.Context, e app.Event) {
 	if len(a.newAssociateName) > 0 {
 		a.updateUser(ctx)
 	} else {
-		err := a.sh.CheckKeys()
+		exists, err := a.alreadyRegistered()
 		if err != nil {
 			log.Println(err)
 			ctx.Notifications().New(app.Notification{
 				Title: "Error",
-				Body:  "You can not register another user on this device.",
+				Body:  "Re-run the setup from https://github.com/stateless-minds/cyber-gubi-local and try again.",
+			})
+		}
+		if exists {
+			ctx.Notifications().New(app.Notification{
+				Title: "Error",
+				Body:  "You can not register more than one user on this device.",
 			})
 		} else {
 			app.Window().GetElementByID("main-menu").Call("click")
@@ -417,6 +431,49 @@ func (a *auth) fetchUser(ctx app.Context) {
 	if days <= 3 {
 		a.getIncome(ctx)
 	}
+}
+
+func (a *auth) alreadyRegistered() (bool, error) {
+	d, err := a.sh.OrbitDocsGet(dbUserDevice, "mac")
+	if err != nil {
+		return false, err
+	}
+
+	var userDevice []UserDevice
+
+	err = json.Unmarshal([]byte(d), &userDevice) // Unmarshal the byte slice directly
+	if err != nil {
+		return false, err
+	}
+
+	if len(userDevice) > 0 {
+		a.userDevice = userDevice[0]
+		if userDevice[0].Registered {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (a *auth) flagRegistered(ctx app.Context) {
+	ctx.Async(func() {
+		userDevice := UserDevice{
+			ID:         a.userDevice.ID,
+			Address:    a.userDevice.Address,
+			Registered: true,
+		}
+
+		deviceJSON, err := json.Marshal(userDevice) // Unmarshal the byte slice directly
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = a.sh.OrbitDocsPut(dbUserDevice, deviceJSON)
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
 }
 
 func (a *auth) getUser(ctx app.Context) error {
@@ -508,6 +565,7 @@ func (a *auth) createUser(ctx app.Context, userID, credentialID string) {
 
 		ctx.Dispatch(func(ctx app.Context) {
 			a.currentUser = user
+			a.flagRegistered(ctx)
 		})
 	})
 }
